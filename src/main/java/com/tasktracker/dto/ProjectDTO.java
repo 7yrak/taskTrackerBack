@@ -7,6 +7,7 @@ public record ProjectDTO(
     String name,
     String description,
     String color,
+    String status,
     LocalDateTime createdAt,
     long totalTasks,
     long doneTasks,

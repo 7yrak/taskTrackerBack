@@ -2,10 +2,10 @@
 -- (las tablas se crean automáticamente con ddl-auto=update)
 
 -- Proyectos
-INSERT INTO projects (name, description, color) VALUES
-  ('Angular Frontend', 'Desarrollo del frontend con Angular y Material', '#e91e63'),
-  ('Spring Boot API', 'Backend REST API con Spring Boot y JPA', '#3f51b5'),
-  ('PostgreSQL DB', 'Diseño de base de datos y migraciones', '#009688')
+INSERT INTO projects (name, description, color, status) VALUES
+  ('Angular Frontend', 'Desarrollo del frontend con Angular y Material', '#e91e63', 'ACTIVE'),
+  ('Spring Boot API', 'Backend REST API con Spring Boot y JPA', '#3f51b5', 'ACTIVE'),
+  ('PostgreSQL DB', 'Diseño de base de datos y migraciones', '#009688', 'ON_HOLD')
 ON CONFLICT DO NOTHING;
 
 -- Miembros del equipo

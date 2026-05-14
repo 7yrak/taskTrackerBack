@@ -33,6 +33,10 @@ public class Project {
     @Column(length = 7)
     private String color;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", columnDefinition = "varchar(255) default 'INITIATED'")
+    private ProjectStatus status;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -59,5 +63,6 @@ public class Project {
     protected void onCreate() {
         if (createdAt == null) createdAt = LocalDateTime.now();
         if (color == null || color.isBlank()) color = "#3f51b5";
+        if (status == null) status = ProjectStatus.INITIATED;
     }
 }

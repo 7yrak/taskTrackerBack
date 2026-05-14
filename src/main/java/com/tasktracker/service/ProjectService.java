@@ -43,6 +43,7 @@ public class ProjectService {
             .name(req.name())
             .description(req.description())
             .color(req.color())
+            .status(req.status() != null ? com.tasktracker.model.ProjectStatus.valueOf(req.status()) : com.tasktracker.model.ProjectStatus.INITIATED)
             .build();
         return toDTO(projectRepository.save(project));
     }
@@ -53,6 +54,7 @@ public class ProjectService {
         project.setName(req.name());
         project.setDescription(req.description());
         if (req.color() != null) project.setColor(req.color());
+        if (req.status() != null) project.setStatus(com.tasktracker.model.ProjectStatus.valueOf(req.status()));
         return toDTO(projectRepository.save(project));
     }
 
@@ -113,7 +115,9 @@ public class ProjectService {
         }
         
         return new ProjectDTO(
-            p.getId(), p.getName(), p.getDescription(), p.getColor(), p.getCreatedAt(),
+            p.getId(), p.getName(), p.getDescription(), p.getColor(),
+            p.getStatus() != null ? p.getStatus().name() : null,
+            p.getCreatedAt(),
             total, done, inProgress, p.getMembers().size(), progressActual, progressExpected
         );
     }
@@ -134,5 +138,5 @@ public class ProjectService {
         
         long elapsed = ChronoUnit.DAYS.between(startDate, today);
         return Math.max(0, Math.min(100, (int) Math.round((double) elapsed / totalDays * 100.0)));
-    }
-}
+        }
+        }

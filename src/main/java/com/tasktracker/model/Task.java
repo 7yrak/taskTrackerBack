@@ -87,7 +87,6 @@ public class Task {
 
     @Builder.Default
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private List<Comment> comments = new ArrayList<>();
