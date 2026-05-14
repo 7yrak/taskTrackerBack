@@ -4,6 +4,7 @@ import com.tasktracker.dto.TaskDTO;
 import com.tasktracker.dto.TaskRequest;
 import com.tasktracker.dto.CommentDTO;
 import com.tasktracker.model.*;
+import com.tasktracker.repository.TaskCommentRepository;
 import com.tasktracker.repository.ProjectRepository;
 import com.tasktracker.repository.TaskRepository;
 import com.tasktracker.repository.TeamMemberRepository;
@@ -27,6 +28,7 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
     private final TeamMemberRepository memberRepository;
+    private final TaskCommentRepository taskCommentRepository;
 
     @Transactional(readOnly = true)
     public List<TaskDTO> findAll(List<Long> projectIds, List<TaskStatus> statuses,
@@ -71,6 +73,12 @@ public class TaskService {
         return toDTO(taskRepository.save(task));
     }
 
+    // This is a helper for the import service to get the managed entity
+    public Task createAndReturnTask(TaskRequest req) {
+        Task task = buildTask(new Task(), req);
+        return taskRepository.save(task);
+    }
+
     public void delete(Long id) {
         if (!taskRepository.existsById(id))
             throw new NoSuchElementException("Tarea no encontrada: " + id);
@@ -79,8 +87,10 @@ public class TaskService {
     }
 
     public void deleteAll() {
-        taskRepository.clearAllParentReferences();
+        // Borrar dependencias primero para evitar errores de restricción de clave foránea
+        taskCommentRepository.deleteAllInBatch();
         taskRepository.deleteAllAssignees();
+        taskRepository.clearAllParentReferences();
         taskRepository.deleteAllInBatch();
     }
 
