@@ -4,6 +4,8 @@ import com.tasktracker.dto.TaskImportResult;
 import com.tasktracker.dto.TaskRequest;
 import com.tasktracker.model.Project;
 import com.tasktracker.model.TeamMember;
+import com.tasktracker.model.TaskPriority; // Importar TaskPriority
+import com.tasktracker.model.TaskStatus;   // Importar TaskStatus
 import com.tasktracker.repository.ProjectRepository;
 import com.tasktracker.repository.TaskRepository;
 import com.tasktracker.repository.TeamMemberRepository;
@@ -106,8 +108,8 @@ public class TaskImportService {
                 }
 
                 String description = row.getOrDefault("Description", "");
-                String status = row.getOrDefault("Status", "TODO");
-                String priority = row.getOrDefault("Priority", "MEDIUM");
+                String statusStr = row.getOrDefault("Status", "TODO"); // Renombrado para evitar conflicto
+                String priorityStr = row.getOrDefault("Priority", "MEDIUM"); // Renombrado para evitar conflicto
                 String projectName = row.getOrDefault("Project", "");
                 String assigneesRaw = row.getOrDefault("Assignees (emails)", "");
                 String startDateRaw = row.getOrDefault("Start_Date", "");
@@ -138,11 +140,29 @@ public class TaskImportService {
                     }
                 }
 
+                // Convertir String a Enum con manejo de errores
+                TaskStatus taskStatus = null;
+                try {
+                    taskStatus = TaskStatus.valueOf(statusStr.trim().toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    warnings.add("Fila " + rowNum + " (Tarea '" + title + "'): estado '" + statusStr + "' no válido, se usará TODO.");
+                    taskStatus = TaskStatus.TODO;
+                }
+
+                TaskPriority taskPriority = null;
+                try {
+                    taskPriority = TaskPriority.valueOf(priorityStr.trim().toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    warnings.add("Fila " + rowNum + " (Tarea '" + title + "'): prioridad '" + priorityStr + "' no válida, se usará MEDIUM.");
+                    taskPriority = TaskPriority.MEDIUM;
+                }
+
+
                 TaskRequest req = new TaskRequest(
                         title,
                         description.isBlank() ? null : description,
-                        status,
-                        priority,
+                        taskStatus, // Ahora es TaskStatus
+                        taskPriority, // Ahora es TaskPriority
                         projectId,
                         assigneeIds.isEmpty() ? null : assigneeIds,
                         parseDate(startDateRaw),

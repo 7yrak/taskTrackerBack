@@ -1,5 +1,6 @@
 package com.tasktracker.controller;
 
+import com.tasktracker.dto.StatusUpdateRequest;
 import com.tasktracker.dto.TaskDTO;
 import com.tasktracker.dto.TaskImportResult;
 import com.tasktracker.dto.TaskRequest;
@@ -17,8 +18,11 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/tasks")
@@ -35,8 +39,30 @@ public class TaskController {
         @RequestParam(required = false) List<String> priority,
         @RequestParam(required = false) List<Long>   assigneeId
     ) {
-        List<TaskStatus>   statuses   = status   != null ? status.stream().map(TaskStatus::valueOf).toList()   : null;
-        List<TaskPriority> priorities = priority != null ? priority.stream().map(TaskPriority::valueOf).toList() : null;
+        List<TaskStatus> statuses = null;
+        if (status != null && !status.isEmpty()) {
+            statuses = new ArrayList<>();
+            for (String s : status) {
+                try {
+                    statuses.add(TaskStatus.valueOf(s.trim().toUpperCase()));
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("Invalid status value provided: '" + s + "'. Allowed values are: " + Arrays.toString(TaskStatus.values()));
+                }
+            }
+        }
+
+        List<TaskPriority> priorities = null;
+        if (priority != null && !priority.isEmpty()) {
+            priorities = new ArrayList<>();
+            for (String p : priority) {
+                try {
+                    priorities.add(TaskPriority.valueOf(p.trim().toUpperCase()));
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("Invalid priority value provided: '" + p + "'. Allowed values are: " + Arrays.toString(TaskPriority.values()));
+                }
+            }
+        }
+
         return taskService.findAll(projectId, statuses, priorities, assigneeId);
     }
 
@@ -57,8 +83,14 @@ public class TaskController {
     }
 
     @PatchMapping("/{id}/status")
-    public TaskDTO updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        return taskService.updateStatus(id, body.get("status"));
+    public TaskDTO updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest req) {
+        TaskStatus taskStatus;
+        try {
+            taskStatus = TaskStatus.valueOf(req.status().trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Estado de tarea no válido: '" + req.status() + "'. Los valores permitidos son: " + Arrays.toString(TaskStatus.values()));
+        }
+        return taskService.updateStatus(id, taskStatus);
     }
 
     @DeleteMapping("/{id}")

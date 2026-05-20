@@ -31,6 +31,7 @@ public class StatsService {
         long inReview = taskRepository.countByStatus(TaskStatus.IN_REVIEW);
         long done = taskRepository.countByStatus(TaskStatus.DONE);
         long blocked = taskRepository.countByStatus(TaskStatus.BLOCKED);
+        long stopped = taskRepository.countByStatus(TaskStatus.STOPPED);
         long totalProjects = projectRepository.count();
         long totalMembers = memberRepository.count();
         long overdue = taskRepository.countOverdue(LocalDate.now());
@@ -50,7 +51,7 @@ public class StatsService {
             "CRITICAL", taskRepository.countByPriority(TaskPriority.CRITICAL)
         );
 
-        return new StatsDTO(total, todo, inProgress, inReview, done, blocked,
+        return new StatsDTO(total, todo, inProgress, inReview, done, blocked,stopped,
             totalProjects, totalMembers, overdue, tasksByProject, tasksByPriority);
     }
 }

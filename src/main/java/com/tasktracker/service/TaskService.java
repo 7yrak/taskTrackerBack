@@ -11,6 +11,8 @@ import com.tasktracker.repository.TeamMemberRepository;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,7 @@ import java.util.*;
 @Transactional
 public class TaskService {
 
+    private static final Logger logger = LoggerFactory.getLogger(TaskService.class);
     private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
     private final TeamMemberRepository memberRepository;
@@ -66,10 +69,14 @@ public class TaskService {
         return toDTO(taskRepository.save(buildTask(task, req)));
     }
 
-    public TaskDTO updateStatus(Long id, String status) {
+    public TaskDTO updateStatus(Long id, TaskStatus status) { // Recibe TaskStatus directamente
+        logger.info("Intentando actualizar estado de la tarea {} al estado: '{}'", id, status);
         Task task = taskRepository.findById(id)
             .orElseThrow(() -> new NoSuchElementException("Tarea no encontrada: " + id));
-        task.setStatus(TaskStatus.valueOf(status));
+        if (status == null) {
+            throw new IllegalArgumentException("El estado no puede ser nulo.");
+        }
+        task.setStatus(status);
         return toDTO(taskRepository.save(task));
     }
 
@@ -98,11 +105,18 @@ public class TaskService {
         task.setTitle(req.title());
         task.setDescription(req.description());
 
-        if (req.status() != null) task.setStatus(TaskStatus.valueOf(req.status()));
-        else if (task.getStatus() == null) task.setStatus(TaskStatus.TODO);
+        // Spring ya ha convertido el String a TaskStatus/TaskPriority
+        if (req.status() != null) {
+            task.setStatus(req.status());
+        } else if (task.getStatus() == null) {
+            task.setStatus(TaskStatus.TODO);
+        }
 
-        if (req.priority() != null) task.setPriority(TaskPriority.valueOf(req.priority()));
-        else if (task.getPriority() == null) task.setPriority(TaskPriority.MEDIUM);
+        if (req.priority() != null) {
+            task.setPriority(req.priority());
+        } else if (task.getPriority() == null) {
+            task.setPriority(TaskPriority.MEDIUM);
+        }
 
         if (req.projectId() != null) {
             task.setProject(projectRepository.findById(req.projectId())
@@ -254,6 +268,7 @@ public class TaskService {
         }
         List<TaskStatus> childStatuses = children.stream().map(this::computeStatus).toList();
         if (childStatuses.stream().allMatch(s -> s == TaskStatus.DONE))     return TaskStatus.DONE;
+        // Eliminado: if (childStatuses.stream().anyMatch(s -> s == TaskStatus.STOPPED))  return TaskStatus.STOPPED;
         if (childStatuses.stream().anyMatch(s -> s == TaskStatus.BLOCKED))  return TaskStatus.BLOCKED;
         if (childStatuses.stream().anyMatch(s -> s == TaskStatus.IN_REVIEW))return TaskStatus.IN_REVIEW;
         if (childStatuses.stream().anyMatch(s -> s == TaskStatus.IN_PROGRESS)) return TaskStatus.IN_PROGRESS;

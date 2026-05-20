@@ -10,6 +10,7 @@ public record StatsDTO(
     long inReviewTasks,
     long doneTasks,
     long blockedTasks,
+    long stoppedTasks,
     long totalProjects,
     long totalMembers,
     long overdueTasks,
