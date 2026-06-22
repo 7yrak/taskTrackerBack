@@ -278,7 +278,7 @@ public class TaskImportService {
         return template.getBytes(StandardCharsets.UTF_8);
     }
 
-    public byte[] exportToExcel() {
+    public byte[] exportToCsv() {
         String data = "ID|Parent_ID|Title|Description|Project|Assignees (emails)|Status|Priority|Start_Date|Due_Date|Progress_Actual\n";
         return data.getBytes(StandardCharsets.UTF_8);
     }

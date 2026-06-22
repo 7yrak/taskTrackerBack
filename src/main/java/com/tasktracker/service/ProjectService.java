@@ -5,6 +5,7 @@ import com.tasktracker.dto.ProjectRequest;
 import com.tasktracker.model.Project;
 import com.tasktracker.model.Task;
 import com.tasktracker.model.TaskStatus;
+import com.tasktracker.model.ProjectStatus;
 import com.tasktracker.model.TeamMember;
 import com.tasktracker.repository.ProjectRepository;
 import com.tasktracker.repository.TaskRepository;
@@ -43,7 +44,7 @@ public class ProjectService {
             .name(req.name())
             .description(req.description())
             .color(req.color())
-            .status(req.status() != null ? com.tasktracker.model.ProjectStatus.valueOf(req.status()) : com.tasktracker.model.ProjectStatus.INITIATED)
+            .status(parseStatus(req.status()))
             .build();
         return toDTO(projectRepository.save(project));
     }
@@ -54,7 +55,7 @@ public class ProjectService {
         project.setName(req.name());
         project.setDescription(req.description());
         if (req.color() != null) project.setColor(req.color());
-        if (req.status() != null) project.setStatus(com.tasktracker.model.ProjectStatus.valueOf(req.status()));
+        if (req.status() != null) project.setStatus(parseStatus(req.status()));
         return toDTO(projectRepository.save(project));
     }
 
@@ -125,18 +126,29 @@ public class ProjectService {
     private Integer computeProgressExpected(Task t) {
         LocalDate dueDate = t.getDueDate();
         if (dueDate == null) return 0;
-        
+
         LocalDate startDate = t.getStartDate() != null ? t.getStartDate()
                             : (t.getCreatedAt() != null ? t.getCreatedAt().toLocalDate() : null);
         if (startDate == null) return 0;
-        
+
         LocalDate today = LocalDate.now();
         long totalDays = ChronoUnit.DAYS.between(startDate, dueDate);
-        
+
         if (totalDays == 0) return !today.isBefore(dueDate) ? 100 : 0;
         if (totalDays < 0)  return 100;
-        
+
         long elapsed = ChronoUnit.DAYS.between(startDate, today);
         return Math.max(0, Math.min(100, (int) Math.round((double) elapsed / totalDays * 100.0)));
+    }
+
+    private ProjectStatus parseStatus(String rawStatus) {
+        if (rawStatus == null || rawStatus.isBlank()) {
+            return ProjectStatus.INITIATED;
         }
+        try {
+            return ProjectStatus.valueOf(rawStatus.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Estado de proyecto no válido: '" + rawStatus + "'");
         }
+    }
+}

@@ -3,7 +3,8 @@ package com.tasktracker.controller;
 import com.tasktracker.model.Reminder;
 import com.tasktracker.model.ReminderComment;
 import com.tasktracker.service.ReminderService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,11 +12,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/reminders")
-@CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class ReminderController {
 
-    @Autowired
-    private ReminderService reminderService;
+    private final ReminderService reminderService;
 
     @GetMapping
     public List<Reminder> getAllReminders() {
@@ -30,6 +30,7 @@ public class ReminderController {
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public Reminder createReminder(@RequestBody Reminder reminder) {
         return reminderService.createReminder(reminder);
     }
@@ -44,9 +45,9 @@ public class ReminderController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteReminder(@PathVariable Long id) {
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteReminder(@PathVariable Long id) {
         reminderService.deleteReminder(id);
-        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/comments")

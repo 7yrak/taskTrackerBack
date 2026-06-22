@@ -4,21 +4,21 @@ import com.tasktracker.model.Reminder;
 import com.tasktracker.model.ReminderComment;
 import com.tasktracker.repository.ReminderCommentRepository;
 import com.tasktracker.repository.ReminderRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class ReminderService {
 
-    @Autowired
-    private ReminderRepository reminderRepository;
+    private final ReminderRepository reminderRepository;
 
-    @Autowired
-    private ReminderCommentRepository reminderCommentRepository;
+    private final ReminderCommentRepository reminderCommentRepository;
 
     public List<Reminder> getAllReminders() {
         return reminderRepository.findAll();
@@ -42,11 +42,14 @@ public class ReminderService {
             reminder.setStartDate(updatedReminder.getStartDate());
             reminder.setDueDate(updatedReminder.getDueDate());
             return reminderRepository.save(reminder);
-        }).orElseThrow(() -> new RuntimeException("Reminder not found"));
+        }).orElseThrow(() -> new NoSuchElementException("Reminder not found: " + id));
     }
 
     @Transactional
     public void deleteReminder(Long id) {
+        if (!reminderRepository.existsById(id)) {
+            throw new NoSuchElementException("Reminder not found: " + id);
+        }
         reminderRepository.deleteById(id);
     }
 
@@ -57,6 +60,6 @@ public class ReminderService {
             reminderCommentRepository.save(comment);
             reminder.getComments().add(comment);
             return reminder;
-        }).orElseThrow(() -> new RuntimeException("Reminder not found"));
+        }).orElseThrow(() -> new NoSuchElementException("Reminder not found: " + reminderId));
     }
 }

@@ -116,21 +116,19 @@ public class TaskController {
         byte[] bytes = taskImportService.generateTemplate();
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION,
-                    "attachment; filename=\"plantilla_tareas.xlsx\"")
-            .contentType(MediaType.parseMediaType(
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    "attachment; filename=\"plantilla_tareas.csv\"")
+            .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
             .body(bytes);
     }
 
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportExcel() throws IOException {
-        byte[] bytes = taskImportService.exportToExcel();
-        String filename = "tareas_" + java.time.LocalDate.now() + ".xlsx";
+        byte[] bytes = taskImportService.exportToCsv();
+        String filename = "tareas_" + java.time.LocalDate.now() + ".csv";
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION,
                     "attachment; filename=\"" + filename + "\"")
-            .contentType(MediaType.parseMediaType(
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+            .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
             .body(bytes);
     }
 }
