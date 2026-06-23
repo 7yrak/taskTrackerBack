@@ -81,6 +81,31 @@ public class ProjectService {
         return toDTO(projectRepository.save(project));
     }
 
+    @Transactional
+    public void syncStatusFromTasks(Long projectId) {
+        Project project = projectRepository.findById(projectId)
+            .orElseThrow(() -> new NoSuchElementException("Proyecto no encontrado: " + projectId));
+
+        List<Task> tasks = taskRepository.findByProjectId(projectId);
+        List<Task> activeTasks = tasks.stream()
+            .filter(task -> task.getStatus() != com.tasktracker.model.TaskStatus.STOPPED)
+            .toList();
+
+        if (activeTasks.isEmpty()) {
+            return;
+        }
+
+        boolean allDone = activeTasks.stream().allMatch(task ->
+            task.getStatus() == TaskStatus.DONE || (task.getProgressActual() != null && task.getProgressActual() >= 100)
+        );
+
+        ProjectStatus derivedStatus = allDone ? ProjectStatus.COMPLETED : ProjectStatus.IN_PROGRESS;
+        if (project.getStatus() != derivedStatus) {
+            project.setStatus(derivedStatus);
+            projectRepository.save(project);
+        }
+    }
+
     private ProjectDTO toDTO(Project p) {
         long total = taskRepository.countByProjectId(p.getId());
         long done = taskRepository.countByProjectIdAndStatus(p.getId(), TaskStatus.DONE);

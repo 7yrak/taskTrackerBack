@@ -27,11 +27,18 @@ import java.util.*;
 @Transactional
 public class TaskService {
 
+    private static final Set<ProjectStatus> INACTIVE_PROJECT_STATUSES = EnumSet.of(
+        ProjectStatus.ON_HOLD,
+        ProjectStatus.COMPLETED,
+        ProjectStatus.CLOSED
+    );
+
     private static final Logger logger = LoggerFactory.getLogger(TaskService.class);
     private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
     private final TeamMemberRepository memberRepository;
     private final TaskCommentRepository taskCommentRepository;
+    private final ProjectService projectService;
 
     @Transactional(readOnly = true)
     public List<TaskDTO> findAll(List<Long> projectIds, List<TaskStatus> statuses,
@@ -39,8 +46,13 @@ public class TaskService {
         Specification<Task> spec = (root, query, cb) -> {
             if (query != null) query.distinct(true);
             List<Predicate> predicates = new ArrayList<>();
+            var projectJoin = root.join("project", JoinType.LEFT);
+            predicates.add(cb.or(
+                cb.isNull(projectJoin.get("id")),
+                cb.not(projectJoin.get("status").in(INACTIVE_PROJECT_STATUSES))
+            ));
             if (projectIds   != null && !projectIds.isEmpty())
-                predicates.add(root.get("project").get("id").in(projectIds));
+                predicates.add(projectJoin.get("id").in(projectIds));
             if (statuses     != null && !statuses.isEmpty())
                 predicates.add(root.get("status").in(statuses));
             if (priorities   != null && !priorities.isEmpty())
@@ -60,13 +72,18 @@ public class TaskService {
 
     public TaskDTO create(TaskRequest req) {
         Task task = buildTask(new Task(), req);
-        return toDTO(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+        syncProjectStatus(saved.getProject(), null);
+        return toDTO(saved);
     }
 
     public TaskDTO update(Long id, TaskRequest req) {
         Task task = taskRepository.findById(id)
             .orElseThrow(() -> new NoSuchElementException("Tarea no encontrada: " + id));
-        return toDTO(taskRepository.save(buildTask(task, req)));
+        Long oldProjectId = task.getProject() != null ? task.getProject().getId() : null;
+        Task saved = taskRepository.save(buildTask(task, req));
+        syncProjectStatus(saved.getProject(), oldProjectId);
+        return toDTO(saved);
     }
 
     public TaskDTO updateStatus(Long id, TaskStatus status) { // Recibe TaskStatus directamente
@@ -77,20 +94,28 @@ public class TaskService {
             throw new IllegalArgumentException("El estado no puede ser nulo.");
         }
         task.setStatus(status);
-        return toDTO(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+        syncProjectStatus(saved.getProject(), null);
+        return toDTO(saved);
     }
 
     // This is a helper for the import service to get the managed entity
     public Task createAndReturnTask(TaskRequest req) {
         Task task = buildTask(new Task(), req);
-        return taskRepository.save(task);
+        Task saved = taskRepository.save(task);
+        syncProjectStatus(saved.getProject(), null);
+        return saved;
     }
 
     public void delete(Long id) {
+        Task task = taskRepository.findById(id)
+            .orElseThrow(() -> new NoSuchElementException("Tarea no encontrada: " + id));
+        Long projectId = task.getProject() != null ? task.getProject().getId() : null;
         if (!taskRepository.existsById(id))
             throw new NoSuchElementException("Tarea no encontrada: " + id);
         taskRepository.detachFromParent(id);
         taskRepository.deleteById(id);
+        syncProjectStatusById(projectId);
     }
 
     public void deleteAll() {
@@ -99,6 +124,21 @@ public class TaskService {
         taskRepository.deleteAllAssignees();
         taskRepository.clearAllParentReferences();
         taskRepository.deleteAllInBatch();
+    }
+
+    private void syncProjectStatus(Project project, Long previousProjectId) {
+        if (previousProjectId != null && !previousProjectId.equals(project != null ? project.getId() : null)) {
+            projectService.syncStatusFromTasks(previousProjectId);
+        }
+        if (project != null && project.getId() != null) {
+            projectService.syncStatusFromTasks(project.getId());
+        }
+    }
+
+    private void syncProjectStatusById(Long projectId) {
+        if (projectId != null) {
+            projectService.syncStatusFromTasks(projectId);
+        }
     }
 
     private Task buildTask(Task task, TaskRequest req) {
@@ -266,12 +306,28 @@ public class TaskService {
             if (t.getProgressActual() != null && t.getProgressActual() >= 100) return TaskStatus.DONE;
             return t.getStatus() != null ? t.getStatus() : TaskStatus.TODO;
         }
-        List<TaskStatus> childStatuses = children.stream().map(this::computeStatus).toList();
-        if (childStatuses.stream().allMatch(s -> s == TaskStatus.DONE))     return TaskStatus.DONE;
-        // Eliminado: if (childStatuses.stream().anyMatch(s -> s == TaskStatus.STOPPED))  return TaskStatus.STOPPED;
-        if (childStatuses.stream().anyMatch(s -> s == TaskStatus.BLOCKED))  return TaskStatus.BLOCKED;
-        if (childStatuses.stream().anyMatch(s -> s == TaskStatus.IN_REVIEW))return TaskStatus.IN_REVIEW;
-        if (childStatuses.stream().anyMatch(s -> s == TaskStatus.IN_PROGRESS)) return TaskStatus.IN_PROGRESS;
+        Set<TaskStatus> childStatuses = children.stream().map(this::computeStatus).collect(java.util.stream.Collectors.toSet());
+        if (childStatuses.size() == 1) {
+            return childStatuses.iterator().next();
+        }
+        if (childStatuses.contains(TaskStatus.IN_REVIEW)) {
+            return TaskStatus.IN_REVIEW;
+        }
+        if (childStatuses.contains(TaskStatus.IN_PROGRESS)) {
+            return TaskStatus.IN_PROGRESS;
+        }
+        if (childStatuses.contains(TaskStatus.BLOCKED)) {
+            return TaskStatus.BLOCKED;
+        }
+        if (childStatuses.stream().allMatch(s -> s == TaskStatus.DONE)) {
+            return TaskStatus.DONE;
+        }
+        if (childStatuses.stream().allMatch(s -> s == TaskStatus.STOPPED)) {
+            return TaskStatus.STOPPED;
+        }
+        if (childStatuses.stream().allMatch(s -> s == TaskStatus.TODO)) {
+            return TaskStatus.TODO;
+        }
         return TaskStatus.TODO;
     }
 
