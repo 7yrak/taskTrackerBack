@@ -1,5 +1,6 @@
 package com.tasktracker.controller;
 
+import com.tasktracker.dto.CommentDTO;
 import com.tasktracker.dto.StatusUpdateRequest;
 import com.tasktracker.dto.TaskDTO;
 import com.tasktracker.dto.TaskImportResult;
@@ -91,6 +92,21 @@ public class TaskController {
             throw new IllegalArgumentException("Estado de tarea no válido: '" + req.status() + "'. Los valores permitidos son: " + Arrays.toString(TaskStatus.values()));
         }
         return taskService.updateStatus(id, taskStatus);
+    }
+
+    @PostMapping("/{id}/comments")
+    public TaskDTO addComment(@PathVariable Long id, @RequestBody CommentDTO comment) {
+        return taskService.addComment(id, comment);
+    }
+
+    @PutMapping("/{id}/comments/{commentId}")
+    public TaskDTO updateComment(@PathVariable Long id, @PathVariable Long commentId, @RequestBody CommentDTO comment) {
+        return taskService.updateComment(id, commentId, comment);
+    }
+
+    @DeleteMapping("/{id}/comments/{commentId}")
+    public TaskDTO deleteComment(@PathVariable Long id, @PathVariable Long commentId) {
+        return taskService.deleteComment(id, commentId);
     }
 
     @DeleteMapping("/{id}")

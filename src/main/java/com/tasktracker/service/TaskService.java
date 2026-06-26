@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -96,6 +97,75 @@ public class TaskService {
         task.setStatus(status);
         Task saved = taskRepository.save(task);
         syncProjectStatus(saved.getProject(), null);
+        return toDTO(saved);
+    }
+
+    public TaskDTO addComment(Long id, CommentDTO commentDTO) {
+        if (commentDTO == null || commentDTO.text() == null || commentDTO.text().trim().isEmpty()) {
+            throw new IllegalArgumentException("El comentario no puede estar vacío.");
+        }
+
+        Task task = taskRepository.findById(id)
+            .orElseThrow(() -> new NoSuchElementException("Tarea no encontrada: " + id));
+
+        if (task.getComments() == null) {
+            task.setComments(new ArrayList<>());
+        }
+
+        Comment comment = new Comment();
+        comment.setAuthor(
+            commentDTO.author() != null && !commentDTO.author().trim().isEmpty()
+                ? commentDTO.author().trim()
+                : "Tú"
+        );
+        comment.setText(commentDTO.text().trim());
+        comment.setDate(commentDTO.date() != null ? commentDTO.date() : LocalDateTime.now());
+        comment.setTask(task);
+
+        task.getComments().add(comment);
+        task.setUpdatedAt(LocalDateTime.now());
+
+        Task saved = taskRepository.save(task);
+        return toDTO(saved);
+    }
+
+    public TaskDTO updateComment(Long taskId, Long commentId, CommentDTO commentDTO) {
+        if (commentDTO == null || commentDTO.text() == null || commentDTO.text().trim().isEmpty()) {
+            throw new IllegalArgumentException("El comentario no puede estar vacío.");
+        }
+
+        Task task = taskRepository.findById(taskId)
+            .orElseThrow(() -> new NoSuchElementException("Tarea no encontrada: " + taskId));
+        Comment comment = taskCommentRepository.findById(commentId)
+            .orElseThrow(() -> new NoSuchElementException("Comentario no encontrado: " + commentId));
+
+        if (comment.getTask() == null || comment.getTask().getId() == null || !comment.getTask().getId().equals(task.getId())) {
+            throw new NoSuchElementException("Comentario no encontrado: " + commentId);
+        }
+
+        comment.setText(commentDTO.text().trim());
+        if (commentDTO.author() != null && !commentDTO.author().trim().isEmpty()) {
+            comment.setAuthor(commentDTO.author().trim());
+        }
+
+        task.setUpdatedAt(LocalDateTime.now());
+        Task saved = taskRepository.save(task);
+        return toDTO(saved);
+    }
+
+    public TaskDTO deleteComment(Long taskId, Long commentId) {
+        Task task = taskRepository.findById(taskId)
+            .orElseThrow(() -> new NoSuchElementException("Tarea no encontrada: " + taskId));
+        Comment comment = taskCommentRepository.findById(commentId)
+            .orElseThrow(() -> new NoSuchElementException("Comentario no encontrado: " + commentId));
+
+        if (comment.getTask() == null || comment.getTask().getId() == null || !comment.getTask().getId().equals(task.getId())) {
+            throw new NoSuchElementException("Comentario no encontrado: " + commentId);
+        }
+
+        task.getComments().removeIf(c -> Objects.equals(c.getId(), commentId));
+        task.setUpdatedAt(LocalDateTime.now());
+        Task saved = taskRepository.save(task);
         return toDTO(saved);
     }
 
