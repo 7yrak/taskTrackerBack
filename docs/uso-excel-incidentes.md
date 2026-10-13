@@ -41,7 +41,7 @@ Las fechas admiten celdas de fecha de Excel o texto dd/mm/aaaa, dd-mm-aaaa y aaa
 
 Se prepararon seis filas de defectos, todas con reportante Susana Antilaf y estado reportado Pendiente validación QA. Las fechas de entrega se conservan: 29 y 30 de septiembre, y 2 de octubre de 2026.
 
-El reporte no indica proyecto, ambiente, prioridades ni emails de responsables: esas celdas se dejaron vacías. Se debe seleccionar el proyecto y completar el ambiente al subir. Si no se completa prioridad, se aplica Media. Los resultados OK, en ejecución y pendientes de re-ejecución se conservaron como contexto en Instrucciones; no se convirtieron en defectos adicionales. No se asignó una fecha a “mañana”, porque el reporte no incluye la fecha desde la que se expresó.
+El reporte no indica proyecto, prioridades ni emails de responsables: esas celdas se dejaron vacías. El usuario indicó UAT para las seis incidencias y el ejemplo ya incluye ese ambiente. Se debe seleccionar el proyecto al subir. Si no se completa prioridad, se aplica Media. Los resultados OK, en ejecución y pendientes de re-ejecución se conservaron como contexto en Instrucciones; no se convirtieron en defectos adicionales. No se asignó una fecha a “mañana”, porque el reporte no incluye la fecha desde la que se expresó.
 
 ## Implementación y verificación
 
