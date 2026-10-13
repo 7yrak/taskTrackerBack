@@ -1,0 +1,10 @@
+package com.tasktracker.repository;
+import com.tasktracker.model.Incident;
+import org.springframework.data.jpa.repository.*;
+import jakarta.persistence.LockModeType;
+import java.util.*;
+public interface IncidentRepository extends JpaRepository<Incident,Long> {
+ @Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select i from Incident i where i.id = :id")
+ Optional<Incident> findLockedById(@org.springframework.data.repository.query.Param("id") Long id);
+ List<Incident> findAllByOrderByCreatedAtDesc();
+}

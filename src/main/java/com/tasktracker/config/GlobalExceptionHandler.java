@@ -13,6 +13,12 @@ import java.util.NoSuchElementException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleUploadLimit(Exception ex) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+            .body(errorBody(HttpStatus.PAYLOAD_TOO_LARGE, "El archivo no puede superar 10 MB"));
+    }
+
     @ExceptionHandler(NoSuchElementException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(NoSuchElementException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
