@@ -6,6 +6,6 @@ Las zonas de proyectos encima de la tabla permiten dejar la fila como raíz y ca
 
 Los estados de cada incidente y las aprobaciones QA/cliente se conservan al organizar la tabla. El cambio se registra en el historial. Los vínculos a tareas de otro proyecto se retiran con una observación. La importación Excel continúa reemplazando solo los incidentes del proyecto, desde cero y en Registrado; no reconstruye jerarquías.
 
-La sección Horas extras permite registrar Fecha, Proyecto, Persona, Tema/actividad y Horas (decimales, mayores a cero y hasta 24 por registro). Sugiere personas del equipo y permite escribir nombres. Tiene edición en tabla y modal, eliminación confirmada, filtros por proyecto/persona/fechas/tema, total de horas y desglose por persona. La descarga CSV contiene la vista filtrada y abre en Excel.
+La sección Horas extras permite registrar Fecha, Persona, Horas, Tema/Motivo y Cliente, vinculados a un Proyecto (decimales, mayores a cero y hasta 24 por registro). Sugiere personas del equipo y permite escribir nombres. Tiene edición en tabla y modal, eliminación confirmada, filtros por proyecto/persona/fechas/tema, total de horas y desglose por persona. La descarga CSV contiene la vista filtrada y abre en Excel.
 
-Los registros históricos deben ingresarse con proyecto y tema conocidos; no se agregan datos inferidos durante la actualización.
+Cliente se guarda por registro y puede indicar “Por confirmar”, independientemente del proyecto. Los registros existentes sin Cliente se muestran como “Por confirmar”. El CSV mantiene el orden Fecha, Persona, Horas, Tema/Motivo, Cliente y Proyecto.

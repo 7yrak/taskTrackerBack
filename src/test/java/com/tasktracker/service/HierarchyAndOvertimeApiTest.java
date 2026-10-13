@@ -62,8 +62,9 @@ class HierarchyAndOvertimeApiTest {
   Project p=project();String request="{\"projectId\":"+p.getId()+",\"date\":\"2026-10-13\",\"person\":\"Rodrigo\",\"topic\":\"Certificación\",\"hours\":1.5}";
   JsonNode created=json.readTree(mvc.perform(post("/api/overtime").contentType(MediaType.APPLICATION_JSON).content(request)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
   assertEquals(1.5,created.get("hours").asDouble());
+  assertEquals("Por confirmar",created.get("client").asText());
   Long id=created.get("id").asLong();
-  mvc.perform(put("/api/overtime/"+id).contentType(MediaType.APPLICATION_JSON).content(request.replace("1.5","2.25"))).andExpect(status().isOk()).andExpect(jsonPath("$.hours").value(2.25));
+  mvc.perform(put("/api/overtime/"+id).contentType(MediaType.APPLICATION_JSON).content(request.replace("1.5","2.25").replace("}",",\"client\":\"Entel\"}"))).andExpect(status().isOk()).andExpect(jsonPath("$.hours").value(2.25)).andExpect(jsonPath("$.client").value("Entel"));
   for(String bad:List.of(request.replace("1.5","0"),request.replace("1.5","25"),request.replace("Certificación"," "),request.replace("Rodrigo"," ")))
    mvc.perform(post("/api/overtime").contentType(MediaType.APPLICATION_JSON).content(bad)).andExpect(status().isBadRequest());
   mvc.perform(delete("/api/overtime/"+id)).andExpect(status().isNoContent());
