@@ -8,15 +8,18 @@ import static org.mockito.Mockito.*;
 import java.util.*;
 import org.springframework.mock.web.MockMultipartFile;
 class IncidentServiceTest {
- IncidentRepository repo; IncidentAttachmentRepository attachmentRepo; IncidentService service; Incident incident;
+ IncidentRepository repo; IncidentAttachmentRepository attachmentRepo; ProjectRepository projectRepo; IncidentService service; Incident incident;
  @BeforeEach void setup() {
   repo=mock(IncidentRepository.class);
   attachmentRepo=mock(IncidentAttachmentRepository.class);
-  service=new IncidentService(repo,attachmentRepo,mock(ProjectRepository.class),mock(TaskRepository.class),mock(TeamMemberRepository.class),new IncidentWorkflow());
+  projectRepo=mock(ProjectRepository.class);
+  service=new IncidentService(repo,attachmentRepo,projectRepo,mock(TaskRepository.class),mock(TeamMemberRepository.class),new IncidentWorkflow());
   incident=new Incident(); incident.setId(1L); incident.setTitle("Error"); incident.setDescription("Descripción"); incident.setReporter("Reportante"); incident.setPriority(TaskPriority.HIGH); incident.setDetectedEnvironment(IncidentEnvironment.PROD);
   Project p=new Project(); p.setId(1L); p.setName("Proyecto"); incident.setProject(p);
   TeamMember dev=new TeamMember(); dev.setId(2L); dev.setName("Desarrollo"); incident.setDeveloper(dev);
   TeamMember qa=new TeamMember(); qa.setId(3L); qa.setName("QA"); incident.setQa(qa);
+  when(projectRepo.findLockedById(1L)).thenReturn(Optional.of(p));
+  when(repo.findById(1L)).thenReturn(Optional.of(incident));
   when(repo.findLockedById(1L)).thenReturn(Optional.of(incident)); when(repo.saveAndFlush(any())).thenAnswer(a -> a.getArgument(0));
  }
  IncidentDTO action(String a,String actor,String note) { return service.transition(1L,new IncidentTransitionRequest(a,actor,note,null)); }

@@ -39,3 +39,9 @@ El backend valida las transiciones independientemente de la interfaz. No hay un 
 ## Validación y límites
 
 Las pruebas de API usan H2 temporal, no la base configurada del sistema. Se requiere certificar también contra PostgreSQL en DESA/CERT antes del pase real. Sin login, las aprobaciones no verifican identidad. La primera entrega carga el listado y su historial; paginación y almacenamiento externo de archivos quedan para un crecimiento posterior.
+
+## Ampliación Excel
+
+IncidentExcelService agrega plantilla, validación previa, reemplazo transaccional por proyecto y exportación .xlsx mediante Apache POI, ya disponible en el backend. Se incorporaron los datos reportedStatus, qaDeliveryDate e importNotes al modelo, la API y la ficha del frontend.
+
+Los detalles del formato, endpoints y puesta en marcha están en [uso-excel-incidentes.md](uso-excel-incidentes.md). La entrega anterior contaba con ocho pruebas; la ampliación incorpora ocho pruebas adicionales de Excel, para un total de dieciséis.

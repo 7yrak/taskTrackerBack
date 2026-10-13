@@ -22,12 +22,19 @@ public class IncidentService {
  @Transactional(readOnly=true) public List<IncidentDTO> all() { return incidents.findAllByOrderByCreatedAtDesc().stream().map(this::dto).toList(); }
  @Transactional(readOnly=true) public IncidentDTO get(Long id) { return dto(find(id)); }
  private Incident find(Long id) { return incidents.findById(id).orElseThrow(() -> new NoSuchElementException("Incidente no encontrado")); }
- private Incident locked(Long id) { return incidents.findLockedById(id).orElseThrow(() -> new NoSuchElementException("Incidente no encontrado")); }
+ private Incident locked(Long id) {
+  Incident snapshot=find(id);
+  projects.findLockedById(snapshot.getProject().getId()).orElseThrow(() -> new IllegalArgumentException("Proyecto no encontrado"));
+  return incidents.findLockedById(id).orElseThrow(() -> new NoSuchElementException("Incidente no encontrado"));
+ }
  public IncidentDTO create(IncidentRequest r) {
+  projects.findLockedById(r.projectId()).orElseThrow(() -> new IllegalArgumentException("Proyecto no encontrado"));
   Incident i = new Incident(); apply(i,r); event(i,"CREATED",null,i.getStatus(),i.getReporter(),"Incidente registrado",null);
   return dto(incidents.saveAndFlush(i));
  }
  public IncidentDTO update(Long id, IncidentRequest r) {
+  if (r != null) java.util.stream.Stream.of(find(id).getProject().getId(), r.projectId()).distinct().sorted()
+   .forEach(projectId -> projects.findLockedById(projectId).orElseThrow(() -> new IllegalArgumentException("Proyecto no encontrado")));
   Incident i=locked(id);
   if(i.getStatus()==IncidentStatus.CLOSED || i.getStatus()==IncidentStatus.CANCELLED) throw new IllegalArgumentException("El incidente está cerrado o cancelado");
   // An approved correction cannot be changed without returning through development.
@@ -45,7 +52,7 @@ public class IncidentService {
   if(i.getStatus()==IncidentStatus.DEVELOPMENT && dev==null) throw new IllegalArgumentException("Debe seleccionar responsable de desarrollo");
   i.setTitle(r.title().trim()); i.setDescription(r.description().trim()); i.setReporter(r.reporter().trim());
   i.setDetectedEnvironment(r.detectedEnvironment()); i.setPriority(r.priority()); i.setProject(p); i.setTask(t);
-  i.setDeveloper(dev); i.setQa(qa); i.setReproductionSteps(r.reproductionSteps()); i.setExpectedResult(r.expectedResult()); i.setActualResult(r.actualResult()); i.setDueDate(r.dueDate()); i.setUpdatedAt(LocalDateTime.now());
+  i.setDeveloper(dev); i.setQa(qa); i.setReproductionSteps(r.reproductionSteps()); i.setExpectedResult(r.expectedResult()); i.setActualResult(r.actualResult()); i.setDueDate(r.dueDate()); i.setReportedStatus(r.reportedStatus()); i.setQaDeliveryDate(r.qaDeliveryDate()); i.setImportNotes(r.importNotes()); i.setUpdatedAt(LocalDateTime.now());
  }
  public IncidentDTO transition(Long id, IncidentTransitionRequest r) {
   Incident i=locked(id); IncidentStatus from=i.getStatus(), to=workflow.next(from,r.action());
@@ -107,6 +114,6 @@ public class IncidentService {
   IncidentEvent e=new IncidentEvent(); e.setIncident(i); e.setType(type); e.setFromStatus(from); e.setToStatus(to); e.setActor(actor); e.setObservation(text); e.setEvidenceUrl(blank(url)?null:url); i.getEvents().add(e);
  }
  private IncidentDTO dto(Incident i) {
-  return new IncidentDTO(i.getId(),i.getTitle(),i.getDescription(),i.getDetectedEnvironment(),i.getPriority(),i.getStatus(),i.getReporter(),i.getProject().getId(),i.getProject().getName(),i.getTask()==null?null:i.getTask().getId(),i.getTask()==null?null:i.getTask().getTitle(),i.getDeveloper()==null?null:i.getDeveloper().getId(),i.getDeveloper()==null?null:i.getDeveloper().getName(),i.getQa()==null?null:i.getQa().getId(),i.getQa()==null?null:i.getQa().getName(),i.getReproductionSteps(),i.getExpectedResult(),i.getActualResult(),i.getDueDate(),i.getCreatedAt(),i.getUpdatedAt(),i.getClosedAt(),i.getEvents().stream().map(e -> new IncidentDTO.Event(e.getId(),e.getType(),e.getFromStatus(),e.getToStatus(),e.getActor(),e.getObservation(),e.getEvidenceUrl(),e.getCreatedAt())).toList(),attachments.findMetadataByIncidentId(i.getId()).stream().map(a -> new IncidentDTO.Attachment(a.getId(),a.getCategory(),a.getFilename(),a.getContentType(),a.getSize(),a.getCreatedAt())).toList());
+  return new IncidentDTO(i.getId(),i.getTitle(),i.getDescription(),i.getDetectedEnvironment(),i.getPriority(),i.getStatus(),i.getReporter(),i.getProject().getId(),i.getProject().getName(),i.getTask()==null?null:i.getTask().getId(),i.getTask()==null?null:i.getTask().getTitle(),i.getDeveloper()==null?null:i.getDeveloper().getId(),i.getDeveloper()==null?null:i.getDeveloper().getName(),i.getQa()==null?null:i.getQa().getId(),i.getQa()==null?null:i.getQa().getName(),i.getReproductionSteps(),i.getExpectedResult(),i.getActualResult(),i.getDueDate(),i.getCreatedAt(),i.getUpdatedAt(),i.getClosedAt(),i.getEvents().stream().map(e -> new IncidentDTO.Event(e.getId(),e.getType(),e.getFromStatus(),e.getToStatus(),e.getActor(),e.getObservation(),e.getEvidenceUrl(),e.getCreatedAt())).toList(),attachments.findMetadataByIncidentId(i.getId()).stream().map(a -> new IncidentDTO.Attachment(a.getId(),a.getCategory(),a.getFilename(),a.getContentType(),a.getSize(),a.getCreatedAt())).toList(),i.getReportedStatus(),i.getQaDeliveryDate(),i.getImportNotes());
  }
 }

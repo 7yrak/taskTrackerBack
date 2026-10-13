@@ -19,6 +19,9 @@ public class Incident {
  @Column(columnDefinition="TEXT") private String reproductionSteps;
  @Column(columnDefinition="TEXT") private String expectedResult;
  @Column(columnDefinition="TEXT") private String actualResult;
+ @Column(length=255) private String reportedStatus;
+ private LocalDate qaDeliveryDate;
+ @Column(columnDefinition="TEXT") private String importNotes;
  private LocalDate dueDate;
  private LocalDateTime createdAt = LocalDateTime.now();
  private LocalDateTime updatedAt = LocalDateTime.now();

@@ -11,6 +11,10 @@ import java.util.Optional;
 public interface IncidentAttachmentRepository extends JpaRepository<IncidentAttachment, Long> {
     Optional<IncidentAttachment> findByIdAndIncidentId(Long id, Long incidentId);
 
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("delete from IncidentAttachment a where a.incident.project.id = :projectId")
+    void deleteByIncidentProjectId(@Param("projectId") Long projectId);
+
     // List metadata without loading the binary contents of every evidence file.
     @Query("select a.id as id, a.category as category, a.filename as filename, " +
         "a.contentType as contentType, a.size as size, a.createdAt as createdAt " +

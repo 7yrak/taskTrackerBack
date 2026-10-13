@@ -42,7 +42,7 @@ RF-14. Llevar historial de estados y observaciones, sin número de intento ni ve
 
 RF-15. Cerrar el incidente al registrar el despliegue en PROD, después de la certificación QA en CERT y aprobación del cliente en UAT. No se exige una validación adicional en PROD.
 
-RF-16. La primera entrega debe incluir tabla y tablero, filtros, comentarios, historial e imágenes. Exportación e indicadores adicionales del dashboard no forman parte del alcance acordado para esta entrega.
+RF-16. La primera entrega debe incluir tabla y tablero, filtros, comentarios, historial e imágenes. Los indicadores adicionales del dashboard quedan fuera del alcance. La exportación Excel se incorporó en la ampliación definida a continuación.
 
 RF-17. Registrar reportante y aprobador del cliente mediante nombre escrito. Seleccionar responsables de desarrollo y QA entre los miembros del equipo existente.
 
@@ -81,7 +81,7 @@ La certificación QA y la aprobación del cliente son obligatorias en cada recor
 - Archivos de evidencia opcionales tanto al reportar como al documentar la corrección. Vista previa de imágenes y descarga de PDF.
 - Aprobaciones requieren observación; enlaces http/https y adjuntos son opcionales.
 - Registro de fechas de creación, actualización, cambios de etapa, comentarios, evidencias y cierre.
-- Sin eliminación de incidentes: la cancelación conserva su trazabilidad. Los cancelados quedan en estado terminal.
+- Sin eliminación individual desde la ficha: la cancelación conserva su trazabilidad. La carga Excel permite reemplazar el listado de un proyecto según la ampliación. Los cancelados quedan en estado terminal.
 
 ## Criterios de aceptación
 
@@ -102,7 +102,7 @@ La certificación QA y la aprobación del cliente son obligatorias en cada recor
 - Bloqueo transaccional al modificar un incidente para serializar cambios concurrentes.
 - API en `/api/incidents`; ruta de interfaz `/incidents`.
 - Sin login, según acuerdo. Los nombres seleccionados/escritos son registros declarados, sin verificación de identidad.
-- Exportaciones e indicadores nuevos del dashboard fuera de esta primera entrega.
+- Indicadores nuevos del dashboard fuera de esta entrega; la ampliación incorpora intercambio por Excel.
 - Cancelación terminal; no se solicitó restaurar incidentes cancelados.
 - Registro de despliegue manual: el módulo no ejecuta despliegues ni conecta ambientes de infraestructura.
 
@@ -113,3 +113,21 @@ La certificación QA y la aprobación del cliente son obligatorias en cada recor
 - Compilación de producción del frontend.
 - Revisión visual de tabla, tablero y ficha; recorrido por interfaz DESA → CERT → UAT → cierre en PROD sobre backend aislado con datos ficticios.
 - No se ha desplegado en DESA, CERT, UAT ni PROD reales. PostgreSQL del ambiente real no se modificó durante las pruebas.
+
+## Ampliación: intercambio estándar por Excel
+
+RF-22. Descargar una plantilla .xlsx estándar con una fila por incidente e instrucciones de carga.
+
+RF-23. Importar una planilla reemplazando desde cero todos los incidentes del proyecto seleccionado, incluidos comentarios, historial y adjuntos anteriores. Conservar íntegros los demás proyectos.
+
+RF-24. Validar todas las filas antes del reemplazo, informar errores por fila y mostrar un resumen con cantidades. Un archivo vacío o con errores no debe borrar datos. El reemplazo debe ser transaccional y recuperarse completo si falla.
+
+RF-25. Crear todos los incidentes importados en Registrado. Conservar estados reportados, fechas de entrega a QA y observaciones como referencia, sin otorgar aprobaciones ni recuperar IDs anteriores.
+
+RF-26. Descargar todos los incidentes del proyecto en el mismo formato estándar, permitiendo volver a importar el archivo. El Excel no incluye archivos adjuntos ni restaura el historial anterior.
+
+RF-27. Permitir elegir Ambiente y Reportante por defecto para completar celdas vacías. Prioridad vacía usa Media. Desarrollo/QA se resuelven por email de miembros existentes; tarea opcional del mismo proyecto.
+
+RF-28. Exigir confirmación explícita de reemplazo en la interfaz después de validar. Si el listado cambia entre validación y reemplazo, exigir nueva validación.
+
+La ampliación se validó con el reporte de Susana Antilaf: seis defectos con fechas de entrega QA y validación pendiente. Guía de uso y columnas en [uso-excel-incidentes.md](uso-excel-incidentes.md).
