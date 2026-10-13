@@ -57,6 +57,8 @@ public class IncidentExcelService {
         attachments.deleteByIncidentProjectId(projectId);
         attachments.flush();
         for (Incident incident : current) incident.getAttachments().clear();
+        current.forEach(i -> i.setParent(null));
+        incidents.flush();
         incidents.deleteAll(current);
         incidents.flush();
         for (IncidentRequest request : parsed.requests()) incidentService.create(request);

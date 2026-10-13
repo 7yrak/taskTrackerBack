@@ -71,7 +71,13 @@ public class TaskService {
             .orElseThrow(() -> new NoSuchElementException("Tarea no encontrada: " + id));
     }
 
+    private void lockHierarchyProjects() {
+        projectRepository.findAll().stream().map(Project::getId).sorted()
+            .forEach(projectRepository::findLockedById);
+    }
+
     public TaskDTO create(TaskRequest req) {
+        lockHierarchyProjects();
         Task task = buildTask(new Task(), req);
         Task saved = taskRepository.save(task);
         syncProjectStatus(saved.getProject(), null);
@@ -79,9 +85,12 @@ public class TaskService {
     }
 
     public TaskDTO update(Long id, TaskRequest req) {
+        lockHierarchyProjects();
         Task task = taskRepository.findById(id)
             .orElseThrow(() -> new NoSuchElementException("Tarea no encontrada: " + id));
         Long oldProjectId = task.getProject() != null ? task.getProject().getId() : null;
+        if (!Objects.equals(oldProjectId, req.projectId()) && (task.getParent()!=null || !task.getChildren().isEmpty()))
+            throw new IllegalArgumentException("Para cambiar de proyecto un grupo, usa arrastrar y soltar");
         Task saved = taskRepository.save(buildTask(task, req));
         syncProjectStatus(saved.getProject(), oldProjectId);
         return toDTO(saved);
@@ -253,6 +262,8 @@ public class TaskService {
         if (req.parentId() != null) {
             Task parent = taskRepository.findById(req.parentId())
                 .orElseThrow(() -> new NoSuchElementException("Tarea padre no encontrada: " + req.parentId()));
+            if (!Objects.equals(req.projectId(), parent.getProject()==null?null:parent.getProject().getId()))
+                throw new IllegalArgumentException("La tarea padre debe pertenecer al mismo proyecto");
             if (isAncestorOf(task.getId(), parent))
                 throw new IllegalArgumentException("Referencia circular: la tarea no puede ser padre de sí misma o de sus antecesores");
             task.setParent(parent);

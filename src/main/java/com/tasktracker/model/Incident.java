@@ -14,6 +14,7 @@ public class Incident {
  @Column(nullable=false) private String reporter;
  @ManyToOne(fetch=FetchType.LAZY, optional=false) private Project project;
  @ManyToOne(fetch=FetchType.LAZY) private Task task;
+ @ManyToOne(fetch=FetchType.LAZY) @JoinColumn(name="parent_id") private Incident parent;
  @ManyToOne(fetch=FetchType.LAZY) private TeamMember developer;
  @ManyToOne(fetch=FetchType.LAZY) private TeamMember qa;
  @Column(columnDefinition="TEXT") private String reproductionSteps;

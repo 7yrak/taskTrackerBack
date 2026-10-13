@@ -30,9 +30,15 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TaskController {
 
+    private final com.tasktracker.service.RowHierarchyService hierarchy;
     private final TaskService taskService;
     private final TaskImportService taskImportService;
 
+ @PatchMapping("/{id}/hierarchy")
+ @ResponseStatus(HttpStatus.NO_CONTENT)
+ public void move(@PathVariable Long id, @RequestBody com.tasktracker.dto.HierarchyMoveRequest request) {
+  hierarchy.moveTask(id, request);
+ }
     @GetMapping
     public List<TaskDTO> getAll(
         @RequestParam(required = false) List<Long>   projectId,

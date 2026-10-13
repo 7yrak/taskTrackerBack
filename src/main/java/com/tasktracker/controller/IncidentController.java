@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 @RestController @RequestMapping("/api/incidents") @RequiredArgsConstructor
 public class IncidentController {
+ private final com.tasktracker.service.RowHierarchyService hierarchy;
  private final IncidentService service;
  private final IncidentExcelService excel;
  @GetMapping("/excel/template") public ResponseEntity<byte[]> template(@RequestParam Long projectId) throws IOException {
@@ -35,6 +36,11 @@ public class IncidentController {
  private ResponseEntity<byte[]> workbook(byte[] data,String filename) {
   return ResponseEntity.ok().contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
    .header(HttpHeaders.CONTENT_DISPOSITION,ContentDisposition.attachment().filename(filename).build().toString()).body(data);
+ }
+ @PatchMapping("/{id}/hierarchy")
+ @ResponseStatus(HttpStatus.NO_CONTENT)
+ public void move(@PathVariable Long id, @RequestBody com.tasktracker.dto.HierarchyMoveRequest request) {
+  hierarchy.moveIncident(id, request);
  }
  @GetMapping public List<IncidentDTO> all() { return service.all(); }
  @GetMapping("/{id}") public IncidentDTO get(@PathVariable Long id) { return service.get(id); }

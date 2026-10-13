@@ -97,6 +97,13 @@ class IncidentExcelApiTest {
         mvc.perform(multipart("/api/incidents/excel/import").file(file(valid)).param("projectId",p.getId().toString()).param("fingerprint",preview.get("fingerprint").asText())).andExpect(status().isBadRequest());
         assertTrue(incidents.existsById(old.getId()));
     }
+    @Test void replacingIncidentHierarchyClearsParentReferencesBeforeDelete() throws Exception {
+        Project p=project(); Incident root=existing(p); Incident child=existing(p); child.setParent(root); incidents.save(child);
+        byte[] bytes=workbook(new String[][]{{"","Nuevo","Descripción","UAT","Media","Susana"}});
+        JsonNode preview=preview(p,bytes); replace(p,bytes,preview.get("fingerprint").asText());
+        assertFalse(incidents.existsById(root.getId())); assertFalse(incidents.existsById(child.getId()));
+        assertEquals(1,incidents.findByProjectIdOrderByCreatedAtDesc(p.getId()).size());
+    }
     @Test void stalePreviewDoesNotOverwriteChanges() throws Exception {
         Project p=project(); Incident old=existing(p); byte[] bytes=workbook(new String[][]{{"","Nuevo","Descripción","CERT","Media","Susana"}});
         JsonNode preview=preview(p,bytes); old.setDescription("Editado después de previsualizar"); incidents.save(old);

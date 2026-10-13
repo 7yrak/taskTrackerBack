@@ -40,6 +40,8 @@ public class IncidentService {
   // An approved correction cannot be changed without returning through development.
   if(i.getStatus()!=IncidentStatus.REGISTERED && i.getStatus()!=IncidentStatus.DEVELOPMENT)
    throw new IllegalArgumentException("Solo se puede editar antes de enviar la corrección a CERT");
+  if (!i.getProject().getId().equals(r.projectId()) && (i.getParent()!=null || incidents.existsByParentId(id)))
+   throw new IllegalArgumentException("Para cambiar de proyecto un grupo, usa arrastrar y soltar");
   apply(i,r); event(i,"UPDATED",i.getStatus(),i.getStatus(),i.getReporter(),"Datos del incidente actualizados",null);
   return dto(incidents.saveAndFlush(i));
  }
@@ -114,6 +116,6 @@ public class IncidentService {
   IncidentEvent e=new IncidentEvent(); e.setIncident(i); e.setType(type); e.setFromStatus(from); e.setToStatus(to); e.setActor(actor); e.setObservation(text); e.setEvidenceUrl(blank(url)?null:url); i.getEvents().add(e);
  }
  private IncidentDTO dto(Incident i) {
-  return new IncidentDTO(i.getId(),i.getTitle(),i.getDescription(),i.getDetectedEnvironment(),i.getPriority(),i.getStatus(),i.getReporter(),i.getProject().getId(),i.getProject().getName(),i.getTask()==null?null:i.getTask().getId(),i.getTask()==null?null:i.getTask().getTitle(),i.getDeveloper()==null?null:i.getDeveloper().getId(),i.getDeveloper()==null?null:i.getDeveloper().getName(),i.getQa()==null?null:i.getQa().getId(),i.getQa()==null?null:i.getQa().getName(),i.getReproductionSteps(),i.getExpectedResult(),i.getActualResult(),i.getDueDate(),i.getCreatedAt(),i.getUpdatedAt(),i.getClosedAt(),i.getEvents().stream().map(e -> new IncidentDTO.Event(e.getId(),e.getType(),e.getFromStatus(),e.getToStatus(),e.getActor(),e.getObservation(),e.getEvidenceUrl(),e.getCreatedAt())).toList(),attachments.findMetadataByIncidentId(i.getId()).stream().map(a -> new IncidentDTO.Attachment(a.getId(),a.getCategory(),a.getFilename(),a.getContentType(),a.getSize(),a.getCreatedAt())).toList(),i.getReportedStatus(),i.getQaDeliveryDate(),i.getImportNotes());
+  return new IncidentDTO(i.getId(),i.getTitle(),i.getDescription(),i.getDetectedEnvironment(),i.getPriority(),i.getStatus(),i.getReporter(),i.getProject().getId(),i.getProject().getName(),i.getTask()==null?null:i.getTask().getId(),i.getTask()==null?null:i.getTask().getTitle(),i.getDeveloper()==null?null:i.getDeveloper().getId(),i.getDeveloper()==null?null:i.getDeveloper().getName(),i.getQa()==null?null:i.getQa().getId(),i.getQa()==null?null:i.getQa().getName(),i.getReproductionSteps(),i.getExpectedResult(),i.getActualResult(),i.getDueDate(),i.getCreatedAt(),i.getUpdatedAt(),i.getClosedAt(),i.getEvents().stream().map(e -> new IncidentDTO.Event(e.getId(),e.getType(),e.getFromStatus(),e.getToStatus(),e.getActor(),e.getObservation(),e.getEvidenceUrl(),e.getCreatedAt())).toList(),attachments.findMetadataByIncidentId(i.getId()).stream().map(a -> new IncidentDTO.Attachment(a.getId(),a.getCategory(),a.getFilename(),a.getContentType(),a.getSize(),a.getCreatedAt())).toList(),i.getReportedStatus(),i.getQaDeliveryDate(),i.getImportNotes(),i.getParent()==null?null:i.getParent().getId());
  }
 }

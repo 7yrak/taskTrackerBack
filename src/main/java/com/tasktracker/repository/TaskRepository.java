@@ -16,6 +16,10 @@ import java.util.List;
 @Repository
 public interface TaskRepository extends JpaRepository<Task, Long>, JpaSpecificationExecutor<Task> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select t from Task t order by t.id")
+    List<Task> findAllLocked();
+
     List<Task> findByProjectId(Long projectId);
 
     List<Task> findByAssigneesId(Long assigneeId);
