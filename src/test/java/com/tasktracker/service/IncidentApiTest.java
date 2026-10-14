@@ -43,6 +43,29 @@ class IncidentApiTest {
   postAction(id,"REOPEN","Reportante","Regresión");
   mvc.perform(get("/api/incidents")).andExpect(status().isOk());
  }
+ @Test void inlineDataAndStateSaveAtomicallyAndRetainCertificationRules() throws Exception {
+  Project p=projects.save(Project.builder().name("Inline estados").build());
+  TeamMember dev=members.save(TeamMember.builder().name("Dev inline").email("dev-inline@example.test").build());
+  TeamMember qa=members.save(TeamMember.builder().name("QA inline").email("qa-inline@example.test").build());
+  var data=json.createObjectNode().put("title","Original").put("description","Prueba").put("reporter","QA").put("projectId",p.getId()).put("developerId",dev.getId()).put("qaId",qa.getId()).put("detectedEnvironment","UAT").put("priority","HIGH");
+  long id=json.readTree(mvc.perform(post("/api/incidents").contentType(MediaType.APPLICATION_JSON).content(data.toString())).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asLong();
+  var edit=json.createObjectNode(); edit.set("data",data.deepCopy().put("title","Editado en fila"));
+  edit.set("transition",json.createObjectNode().put("action","START"));
+  mvc.perform(post("/api/incidents/{id}/inline-edit",id).contentType(MediaType.APPLICATION_JSON).content(edit.toString())).andExpect(status().isOk()).andExpect(jsonPath("$.title").value("Editado en fila")).andExpect(jsonPath("$.status").value("DEVELOPMENT"));
+  edit.set("data",data.deepCopy().put("title","No debe guardarse").putNull("qaId"));
+  edit.set("transition",json.createObjectNode().put("action","SEND_CERT"));
+  mvc.perform(post("/api/incidents/{id}/inline-edit",id).contentType(MediaType.APPLICATION_JSON).content(edit.toString())).andExpect(status().isBadRequest());
+  mvc.perform(get("/api/incidents/{id}",id)).andExpect(status().isOk()).andExpect(jsonPath("$.title").value("Editado en fila")).andExpect(jsonPath("$.qaId").value(qa.getId())).andExpect(jsonPath("$.status").value("DEVELOPMENT"));
+  postAction(id,"SEND_CERT","","");
+  edit.putNull("data");edit.set("transition",json.createObjectNode().put("action","APPROVE_QA").put("observation",""));
+  mvc.perform(post("/api/incidents/{id}/inline-edit",id).contentType(MediaType.APPLICATION_JSON).content(edit.toString())).andExpect(status().isBadRequest());
+  edit.set("transition",json.createObjectNode().put("action","APPROVE_QA").put("observation","Pruebas correctas"));
+  mvc.perform(post("/api/incidents/{id}/inline-edit",id).contentType(MediaType.APPLICATION_JSON).content(edit.toString())).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("QA_APPROVED"));
+  edit.set("transition",json.createObjectNode().put("action","DEPLOY").put("actor","Operador").put("observation","No permitido"));
+  mvc.perform(post("/api/incidents/{id}/inline-edit",id).contentType(MediaType.APPLICATION_JSON).content(edit.toString())).andExpect(status().isBadRequest());
+  edit.putNull("transition");
+  mvc.perform(post("/api/incidents/{id}/inline-edit",id).contentType(MediaType.APPLICATION_JSON).content(edit.toString())).andExpect(status().isBadRequest());
+ }
  @Test void invalidRequestsAndCrossProjectTaskAreRejected() throws Exception {
   mvc.perform(post("/api/incidents").contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isBadRequest());
   Project p=projects.save(Project.builder().name("Proyecto A").build()); Project other=projects.save(Project.builder().name("Proyecto B").build());

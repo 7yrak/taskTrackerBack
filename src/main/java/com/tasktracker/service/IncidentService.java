@@ -56,6 +56,12 @@ public class IncidentService {
   i.setDetectedEnvironment(r.detectedEnvironment()); i.setPriority(r.priority()); i.setProject(p); i.setTask(t);
   i.setDeveloper(dev); i.setQa(qa); i.setReproductionSteps(r.reproductionSteps()); i.setExpectedResult(r.expectedResult()); i.setActualResult(r.actualResult()); i.setDueDate(r.dueDate()); i.setReportedStatus(r.reportedStatus()); i.setQaDeliveryDate(r.qaDeliveryDate()); i.setImportNotes(r.importNotes()); i.setUpdatedAt(LocalDateTime.now());
  }
+ public IncidentDTO inlineEdit(Long id, IncidentInlineEditRequest r) {
+  if (r.data()==null && r.transition()==null) throw new IllegalArgumentException("No hay cambios para guardar");
+  IncidentDTO result=r.data()==null ? get(id) : update(id,r.data());
+  // Data and workflow changes commit together; a rejected transition rolls back the data edit.
+  return r.transition()==null ? result : transition(id,r.transition());
+ }
  public IncidentDTO transition(Long id, IncidentTransitionRequest r) {
   Incident i=locked(id); IncidentStatus from=i.getStatus(), to=workflow.next(from,r.action());
   String actor=r.actor();

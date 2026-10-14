@@ -46,6 +46,7 @@ public class IncidentController {
  @GetMapping("/{id}") public IncidentDTO get(@PathVariable Long id) { return service.get(id); }
  @PostMapping @ResponseStatus(HttpStatus.CREATED) public IncidentDTO create(@Valid @RequestBody IncidentRequest r) { return service.create(r); }
  @PutMapping("/{id}") public IncidentDTO update(@PathVariable Long id,@Valid @RequestBody IncidentRequest r) { return service.update(id,r); }
+ @PostMapping("/{id}/inline-edit") public IncidentDTO inlineEdit(@PathVariable Long id,@Valid @RequestBody IncidentInlineEditRequest r) { return service.inlineEdit(id,r); }
  @PostMapping("/{id}/transitions") public IncidentDTO transition(@PathVariable Long id,@Valid @RequestBody IncidentTransitionRequest r) { return service.transition(id,r); }
  @PostMapping("/{id}/comments") public IncidentDTO comment(@PathVariable Long id,@Valid @RequestBody IncidentCommentRequest r) { return service.comment(id,r); }
  @PostMapping(value="/{id}/attachments",consumes=MediaType.MULTIPART_FORM_DATA_VALUE) public IncidentDTO upload(@PathVariable Long id,@RequestParam String category,@RequestParam MultipartFile file) throws IOException { return service.upload(id,category,file); }
