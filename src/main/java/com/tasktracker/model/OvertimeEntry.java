@@ -12,5 +12,6 @@ public class OvertimeEntry {
  @Column(nullable=false,columnDefinition="TEXT") private String topic;
  @Column(nullable=false,precision=5,scale=2) private BigDecimal hours;
  @Column(length=255) private String client;
+ @Column(nullable=false,columnDefinition="boolean default false") private boolean sentToManagement = false;
  private LocalDateTime createdAt=LocalDateTime.now();
 }

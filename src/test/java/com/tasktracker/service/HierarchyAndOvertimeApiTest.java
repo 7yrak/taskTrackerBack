@@ -61,10 +61,27 @@ class HierarchyAndOvertimeApiTest {
  @Test void overtimeCrudPreservesFractionalHoursAndRejectsInvalidEntries()throws Exception {
   Project p=project();String request="{\"projectId\":"+p.getId()+",\"date\":\"2026-10-13\",\"person\":\"Rodrigo\",\"topic\":\"Certificación\",\"hours\":1.5}";
   JsonNode created=json.readTree(mvc.perform(post("/api/overtime").contentType(MediaType.APPLICATION_JSON).content(request)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+  assertFalse(created.get("sentToManagement").asBoolean());
   assertEquals(1.5,created.get("hours").asDouble());
   assertEquals("Por confirmar",created.get("client").asText());
   Long id=created.get("id").asLong();
   mvc.perform(put("/api/overtime/"+id).contentType(MediaType.APPLICATION_JSON).content(request.replace("1.5","2.25").replace("}",",\"client\":\"Entel\"}"))).andExpect(status().isOk()).andExpect(jsonPath("$.hours").value(2.25)).andExpect(jsonPath("$.client").value("Entel"));
+  mvc.perform(put("/api/overtime/"+id).contentType(MediaType.APPLICATION_JSON).content(request.replace("}",",\"sentToManagement\":true}")))
+   .andExpect(status().isOk()).andExpect(jsonPath("$.sentToManagement").value(true));
+  mvc.perform(put("/api/overtime/"+id).contentType(MediaType.APPLICATION_JSON).content(request))
+   .andExpect(status().isOk()).andExpect(jsonPath("$.sentToManagement").value(true));
+  byte[] excel=mvc.perform(post("/api/overtime/export/excel").contentType(MediaType.APPLICATION_JSON).content("["+id+"]"))
+   .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+  try(var book=new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(excel))) {
+   var sheet=book.getSheetAt(0);
+   assertEquals(6,sheet.getRow(0).getLastCellNum());
+   assertEquals("Proyecto",sheet.getRow(0).getCell(5).getStringCellValue());
+   assertEquals("Rodrigo",sheet.getRow(1).getCell(1).getStringCellValue());
+   assertEquals(1.5,sheet.getRow(1).getCell(2).getNumericCellValue());
+   assertEquals(2,sheet.getLastRowNum());
+  }
+  mvc.perform(put("/api/overtime/"+id).contentType(MediaType.APPLICATION_JSON).content(request.replace("}",",\"sentToManagement\":false}")))
+   .andExpect(status().isOk()).andExpect(jsonPath("$.sentToManagement").value(false));
   for(String bad:List.of(request.replace("1.5","0"),request.replace("1.5","25"),request.replace("Certificación"," "),request.replace("Rodrigo"," ")))
    mvc.perform(post("/api/overtime").contentType(MediaType.APPLICATION_JSON).content(bad)).andExpect(status().isBadRequest());
   mvc.perform(delete("/api/overtime/"+id)).andExpect(status().isNoContent());
