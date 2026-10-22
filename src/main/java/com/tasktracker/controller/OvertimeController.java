@@ -9,6 +9,10 @@ import java.util.List;
 @RestController @RequestMapping("/api/overtime") @RequiredArgsConstructor
 public class OvertimeController {
  private final OvertimeService service;
+ @PostMapping(value="/import/excel", consumes="multipart/form-data")
+ public List<OvertimeDTO> importExcel(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+  return service.replaceFromExcel(file);
+ }
  @PostMapping("/export/excel")
  public org.springframework.http.ResponseEntity<byte[]> exportExcel(@RequestBody List<Long> ids) throws java.io.IOException {
   return org.springframework.http.ResponseEntity.ok()
