@@ -36,7 +36,7 @@ public class OvertimeService {
   List<OvertimeDTO> rows = all().stream().filter(e -> selected.contains(e.id())).toList();
   try (var book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(); var output = new java.io.ByteArrayOutputStream()) {
    var sheet = book.createSheet("Horas extras");
-   String[] headers = {"Fecha", "Persona", "Horas", "Tema/Motivo", "Cliente", "Proyecto", "Enviado a jefatura"};
+   String[] headers = {"Fecha", "Persona", "Horas", "Tema/Motivo", "Proyecto", "Enviado a jefatura"};
    var header = sheet.createRow(0);
    var headerStyle = book.createCellStyle();
    var font = book.createFont(); font.setBold(true); headerStyle.setFont(font);
@@ -48,14 +48,13 @@ public class OvertimeService {
     row.createCell(1).setCellValue(entry.person());
     row.createCell(2).setCellValue(entry.hours().doubleValue());
     row.createCell(3).setCellValue(entry.topic());
-    row.createCell(4).setCellValue(entry.client());
-    row.createCell(5).setCellValue(entry.projectName());
-    row.createCell(6).setCellValue(entry.sentToManagement() ? "Sí" : "No");
+    row.createCell(4).setCellValue(entry.projectName());
+    row.createCell(5).setCellValue(entry.sentToManagement() ? "Sí" : "No");
     total+=entry.hours().doubleValue();
    }
    var footer=sheet.createRow(index); footer.createCell(1).setCellValue("Total horas"); footer.createCell(2).setCellValue(Math.round(total*100)/100.0);
    sheet.createFreezePane(0,1);
-   sheet.setAutoFilter(new org.apache.poi.ss.util.CellRangeAddress(0, Math.max(0,index-1),0,6));
+   sheet.setAutoFilter(new org.apache.poi.ss.util.CellRangeAddress(0, Math.max(0,index-1),0,5));
    for(int c=0;c<headers.length;c++) { sheet.autoSizeColumn(c); sheet.setColumnWidth(c,Math.min(15000,sheet.getColumnWidth(c)+512)); }
    book.write(output); return output.toByteArray();
   }

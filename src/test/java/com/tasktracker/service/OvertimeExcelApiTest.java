@@ -46,9 +46,10 @@ class OvertimeExcelApiTest {
             row.createCell(1).setCellValue("Nicolás");
             row.createCell(2).setCellValue("1,5");
             row.createCell(3).setCellValue("Soporte");
-            row.createCell(4).setCellValue("Entel");
-            row.createCell(5).setCellValue(original.projectName());
-            row.createCell(6).setCellValue("No");
+            assertEquals("Proyecto", sheet.getRow(0).getCell(4).getStringCellValue());
+            assertEquals(6, sheet.getRow(0).getLastCellNum());
+            row.createCell(4).setCellValue(original.projectName());
+            row.createCell(5).setCellValue("No");
             // A record added after downloading must also disappear on replacement.
             service.save(null, new OvertimeRequest(original.projectId(), original.date(), "Eliminar", "Otro", BigDecimal.ONE, "Entel", false));
             mvc.perform(multipart("/api/overtime/import/excel").file(file(book)))
@@ -76,8 +77,11 @@ class OvertimeExcelApiTest {
         var id = seed();
         try (var book = new XSSFWorkbook(new ByteArrayInputStream(service.exportExcel(List.of(id))))) {
             var sheet = book.getSheetAt(0);
-            sheet.getRow(0).removeCell(sheet.getRow(0).getCell(6));
-            sheet.getRow(1).removeCell(sheet.getRow(1).getCell(6));
+            sheet.getRow(0).getCell(4).setCellValue("Cliente");
+            sheet.getRow(0).getCell(5).setCellValue("Proyecto");
+            String projectName = sheet.getRow(1).getCell(4).getStringCellValue();
+            sheet.getRow(1).getCell(4).setCellValue("Entel");
+            sheet.getRow(1).getCell(5).setCellValue(projectName);
             var style = book.createCellStyle();
             style.setDataFormat(book.createDataFormat().getFormat("dd/mm/yyyy"));
             sheet.getRow(1).getCell(0).setCellValue(LocalDate.of(2026,10,13));

@@ -31,13 +31,17 @@ public class OvertimeExcelReader {
             if (sheet == null) throw new IllegalArgumentException("Falta la hoja Horas extras del Excel descargado");
             var formatter = new DataFormatter(Locale.forLanguageTag("es-CL"));
             var evaluator = book.getCreationHelper().createFormulaEvaluator();
-            for (int c = 0; c < HEADERS.length; c++) {
-                if (!HEADERS[c].equalsIgnoreCase(text(sheet.getRow(0), c, formatter, evaluator)))
-                    throw new IllegalArgumentException("Columna " + (c + 1) + ": se esperaba " + HEADERS[c]);
+            boolean legacy = "Cliente".equalsIgnoreCase(text(sheet.getRow(0), 4, formatter, evaluator));
+            String[] headers = legacy ? HEADERS : new String[]{"Fecha", "Persona", "Horas", "Tema/Motivo", "Proyecto"};
+            int projectColumn = legacy ? 5 : 4;
+            int statusColumn = projectColumn + 1;
+            for (int c = 0; c < headers.length; c++) {
+                if (!headers[c].equalsIgnoreCase(text(sheet.getRow(0), c, formatter, evaluator)))
+                    throw new IllegalArgumentException("Columna " + (c + 1) + ": se esperaba " + headers[c]);
             }
-            String statusHeader = text(sheet.getRow(0), 6, formatter, evaluator);
+            String statusHeader = text(sheet.getRow(0), statusColumn, formatter, evaluator);
             if (!statusHeader.isEmpty() && !statusHeader.equalsIgnoreCase("Enviado a jefatura"))
-                throw new IllegalArgumentException("La séptima columna debe ser Enviado a jefatura");
+                throw new IllegalArgumentException("La columna final debe ser Enviado a jefatura");
             List<OvertimeRequest> result = new ArrayList<>();
             for (int r = 1; r <= sheet.getLastRowNum(); r++) {
                 Row row = sheet.getRow(r);
@@ -48,11 +52,11 @@ public class OvertimeExcelReader {
                 if (values[0].isEmpty() && values[1].equals("Total horas")
                         && values[3].isEmpty() && values[4].isEmpty() && values[5].isEmpty() && values[6].isEmpty()) continue;
                 try {
-                    var matching = available.stream().filter(p -> p.getName().trim().equalsIgnoreCase(values[5])).toList();
+                    var matching = available.stream().filter(p -> p.getName().trim().equalsIgnoreCase(values[projectColumn])).toList();
                     if (matching.size() != 1)
-                        throw new IllegalArgumentException("Proyecto inexistente o ambiguo: " + values[5]);
+                        throw new IllegalArgumentException("Proyecto inexistente o ambiguo: " + values[projectColumn]);
                     var request = new OvertimeRequest(matching.get(0).getId(), date(row.getCell(0), values[0]),
-                            values[1], values[3], hours(row.getCell(2), values[2], evaluator), values[4], sent(values[6]));
+                            values[1], values[3], hours(row.getCell(2), values[2], evaluator), legacy ? values[4] : null, sent(values[statusColumn]));
                     var violations = validator.validate(request);
                     if (!violations.isEmpty()) throw new IllegalArgumentException(violations.stream()
                             .map(v -> v.getPropertyPath() + ": " + v.getMessage()).sorted().findFirst().orElseThrow());
