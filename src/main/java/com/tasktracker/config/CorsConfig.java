@@ -6,6 +6,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
+@org.springframework.context.annotation.Profile("!kova")
 @Configuration
 public class CorsConfig {
 
