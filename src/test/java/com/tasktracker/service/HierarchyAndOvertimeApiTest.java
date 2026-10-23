@@ -74,8 +74,9 @@ class HierarchyAndOvertimeApiTest {
    .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
   try(var book=new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(excel))) {
    var sheet=book.getSheetAt(0);
-   assertEquals(7,sheet.getRow(0).getLastCellNum());
-   assertEquals("Proyecto",sheet.getRow(0).getCell(5).getStringCellValue());
+   assertEquals(6,sheet.getRow(0).getLastCellNum());
+   assertEquals("Proyecto",sheet.getRow(0).getCell(4).getStringCellValue());
+   assertEquals("Enviado a jefatura",sheet.getRow(0).getCell(5).getStringCellValue());
    assertEquals("Rodrigo",sheet.getRow(1).getCell(1).getStringCellValue());
    assertEquals(1.5,sheet.getRow(1).getCell(2).getNumericCellValue());
    assertEquals(2,sheet.getLastRowNum());

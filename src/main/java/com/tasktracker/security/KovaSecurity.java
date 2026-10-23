@@ -61,7 +61,8 @@ public class KovaSecurity {
             this.check=RestClient.builder().requestFactory(factory).baseUrl(uri).build();
         }
         @Override protected boolean shouldNotFilter(HttpServletRequest request) {
-            return !(request.getServletPath().startsWith("/api/") || request.getServletPath().equals("/auth/session"));
+            String path=request.getRequestURI().substring(request.getContextPath().length());
+            return !(path.startsWith("/api/") || path.equals("/auth/session"));
         }
         @Override protected void doFilterInternal(HttpServletRequest r,HttpServletResponse s,FilterChain chain)
                 throws ServletException,IOException {
