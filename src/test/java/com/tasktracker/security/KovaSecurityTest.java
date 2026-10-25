@@ -32,12 +32,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class KovaSecurityTest {
  static HttpServer server;
  static volatile int code=200;
+ static volatile String responseInstance="tt-11111111111111111111111111111111";
  static volatile String role="OWNER";
  static final String ORG="11111111-1111-1111-1111-111111111111";
  @DynamicPropertySource static void properties(DynamicPropertyRegistry props) throws Exception {
   server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
   server.createContext("/check",exchange->{
-   String body="{\"instanceId\":\"tt-11111111111111111111111111111111\",\"organizationId\":\""+ORG+
+   String body="{\"instanceId\":\""+responseInstance+"\",\"organizationId\":\""+ORG+
      "\",\"organizationName\":\"Pilot\",\"role\":\""+role+"\",\"status\":\"ACTIVE\"}";
    exchange.getResponseHeaders().set("Content-Type","application/json");
    exchange.sendResponseHeaders(code,body.getBytes().length);
@@ -48,7 +49,7 @@ class KovaSecurityTest {
  @Autowired MockMvc mvc;
  @Autowired OAuth2AuthorizedClientService clients;
  @Autowired ClientRegistrationRepository registrations;
- @BeforeEach void reset() {code=200;role="OWNER";}
+ @BeforeEach void reset() {code=200;role="OWNER";responseInstance="tt-11111111111111111111111111111111";}
  @AfterAll static void stop() {if(server!=null)server.stop(0);}
  private org.springframework.test.web.servlet.request.RequestPostProcessor signedIn(String org) {
   var login=oidcLogin().idToken(t->t.subject("pilot-user").claim("organization_id",org).claim("instance_id","tt-11111111111111111111111111111111"));
@@ -87,6 +88,14 @@ class KovaSecurityTest {
   mvc.perform(get("/api/projects").with(signedIn(ORG))).andExpect(status().isOk());
   mvc.perform(post("/api/projects").with(signedIn(ORG)).with(csrf())
     .contentType("application/json").content("{\"name\":\"Blocked\"}")).andExpect(status().isForbidden());
+ }
+ @Test void anotherCustomerInstanceCannotReuseThisService() throws Exception {
+  responseInstance="tt-22222222222222222222222222222222";
+  mvc.perform(get("/auth/session").with(signedIn(ORG))).andExpect(status().isForbidden());
+ }
+ @Test void healthMetadataIdentifiesOnlyThisConfiguredInstance() throws Exception {
+  mvc.perform(get("/auth/info")).andExpect(status().isOk())
+   .andExpect(jsonPath("$.instance").value("tt-11111111111111111111111111111111"));
  }
  @Test void loginUsesPkce() throws Exception {
   mvc.perform(get("/oauth2/authorization/kova")).andExpect(status().is3xxRedirection())
