@@ -17,4 +17,4 @@ jobs:
           distribution: temurin
           java-version: '21'
       - name: Unit, security and packaging
-        run: sh ./mvnw -B -ntp package
+        run: mvn -B -ntp package
