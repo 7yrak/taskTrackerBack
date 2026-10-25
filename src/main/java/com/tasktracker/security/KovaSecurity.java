@@ -27,7 +27,8 @@ public class KovaSecurity {
     @Bean
     SecurityFilterChain kovaChain(HttpSecurity http,OAuth2AuthorizedClientService clients,
             @Value("${tasktracker.kova.check-uri}") String checkUri,
-            @Value("${tasktracker.kova.ui-uri}") String ui) throws Exception {
+            @Value("${tasktracker.kova.ui-uri}") String ui,
+            @Value("${spring.security.oauth2.client.registration.kova.client-id:tasktracker-pilot}") String instance) throws Exception {
         if(!ui.startsWith("https://") && !ui.startsWith("http://127.0.0.1:"))
             throw new IllegalArgumentException("Invalid public UI URI");
         http.authorizeHttpRequests(a->a
@@ -47,14 +48,18 @@ public class KovaSecurity {
             .addLogoutHandler((r,s,a)->{if(a instanceof OAuth2AuthenticationToken t)
                 clients.removeAuthorizedClient(t.getAuthorizedClientRegistrationId(),t.getName());}));
         http.exceptionHandling(e->e.authenticationEntryPoint((r,s,x)->s.setStatus(401)));
-        http.addFilterBefore(new GrantFilter(clients,checkUri),AuthorizationFilter.class);
+        http.addFilterBefore(new GrantFilter(clients,checkUri,instance),AuthorizationFilter.class);
         return http.build();
     }
 
     static final class GrantFilter extends OncePerRequestFilter {
         private final OAuth2AuthorizedClientService clients;
         private final RestClient check;
-        GrantFilter(OAuth2AuthorizedClientService clients,String uri) {
+        private final String instance;
+        GrantFilter(OAuth2AuthorizedClientService clients,String uri) {this(clients,uri,"tasktracker-pilot");}
+        GrantFilter(OAuth2AuthorizedClientService clients,String uri,String instance) {
+            if(!instance.equals("tasktracker-pilot")&&!instance.matches("tt-[a-f0-9]{32}"))throw new IllegalArgumentException("Invalid instance");
+            this.instance=instance;
             this.clients=clients;
             var factory=new org.springframework.http.client.SimpleClientHttpRequestFactory();
             factory.setConnectTimeout(Duration.ofSeconds(2)); factory.setReadTimeout(Duration.ofSeconds(3));
@@ -77,7 +82,8 @@ public class KovaSecurity {
                 var response=check.get().headers(h->h.setBearerAuth(client.getAccessToken().getTokenValue()))
                     .retrieve().toEntity(Map.class);
                 Map<?,?> grant=response.getBody();
-                if(grant==null || !"tasktracker-pilot".equals(grant.get("instanceId"))
+                if(grant==null || !instance.equals(grant.get("instanceId"))
+                    || !instance.equals(token.getPrincipal().getAttribute("instance_id"))
                     || !"ACTIVE".equals(grant.get("status"))
                     || !Objects.equals(token.getPrincipal().getAttribute("organization_id"),grant.get("organizationId"))) {
                     clear(r,token);s.setStatus(403);return;

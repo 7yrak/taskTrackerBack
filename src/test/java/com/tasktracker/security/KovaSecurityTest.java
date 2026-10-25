@@ -22,6 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  "spring.datasource.driver-class-name=org.h2.Driver","spring.datasource.username=sa","spring.datasource.password=",
  "spring.jpa.hibernate.ddl-auto=create-drop","spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
  "spring.jpa.show-sql=false","tasktracker.kova.ui-uri=http://127.0.0.1:8082/",
+ "spring.security.oauth2.client.registration.kova.client-id=tt-11111111111111111111111111111111",
  "spring.security.oauth2.client.registration.kova.redirect-uri=http://127.0.0.1:8082/login/oauth2/code/kova",
  "spring.security.oauth2.client.provider.kova.authorization-uri=http://127.0.0.1:18090/oauth2/authorize",
  "spring.security.oauth2.client.provider.kova.token-uri=http://127.0.0.1:18090/oauth2/token",
@@ -31,12 +32,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class KovaSecurityTest {
  static HttpServer server;
  static volatile int code=200;
+ static volatile String responseInstance="tt-11111111111111111111111111111111";
  static volatile String role="OWNER";
  static final String ORG="11111111-1111-1111-1111-111111111111";
  @DynamicPropertySource static void properties(DynamicPropertyRegistry props) throws Exception {
   server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
   server.createContext("/check",exchange->{
-   String body="{\"instanceId\":\"tasktracker-pilot\",\"organizationId\":\""+ORG+
+   String body="{\"instanceId\":\""+responseInstance+"\",\"organizationId\":\""+ORG+
      "\",\"organizationName\":\"Pilot\",\"role\":\""+role+"\",\"status\":\"ACTIVE\"}";
    exchange.getResponseHeaders().set("Content-Type","application/json");
    exchange.sendResponseHeaders(code,body.getBytes().length);
@@ -47,16 +49,16 @@ class KovaSecurityTest {
  @Autowired MockMvc mvc;
  @Autowired OAuth2AuthorizedClientService clients;
  @Autowired ClientRegistrationRepository registrations;
- @BeforeEach void reset() {code=200;role="OWNER";}
+ @BeforeEach void reset() {code=200;role="OWNER";responseInstance="tt-11111111111111111111111111111111";}
  @AfterAll static void stop() {if(server!=null)server.stop(0);}
  private org.springframework.test.web.servlet.request.RequestPostProcessor signedIn(String org) {
-  var login=oidcLogin().idToken(t->t.subject("pilot-user").claim("organization_id",org));
+  var login=oidcLogin().idToken(t->t.subject("pilot-user").claim("organization_id",org).claim("instance_id","tt-11111111111111111111111111111111"));
   var access=new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER,"test-only-access",
       Instant.now(),Instant.now().plusSeconds(120));
   var principal=new org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser(
       List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_USER")),
       new org.springframework.security.oauth2.core.oidc.OidcIdToken("test-id-token",Instant.now(),
-      Instant.now().plusSeconds(120),Map.of("sub","pilot-user","organization_id",org)));
+      Instant.now().plusSeconds(120),Map.of("sub","pilot-user","organization_id",org,"instance_id","tt-11111111111111111111111111111111")));
   var auth=new org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken(principal,
       principal.getAuthorities(),"kova");
   clients.saveAuthorizedClient(new OAuth2AuthorizedClient(registrations.findByRegistrationId("kova"),
@@ -86,6 +88,14 @@ class KovaSecurityTest {
   mvc.perform(get("/api/projects").with(signedIn(ORG))).andExpect(status().isOk());
   mvc.perform(post("/api/projects").with(signedIn(ORG)).with(csrf())
     .contentType("application/json").content("{\"name\":\"Blocked\"}")).andExpect(status().isForbidden());
+ }
+ @Test void anotherCustomerInstanceCannotReuseThisService() throws Exception {
+  responseInstance="tt-22222222222222222222222222222222";
+  mvc.perform(get("/auth/session").with(signedIn(ORG))).andExpect(status().isForbidden());
+ }
+ @Test void healthMetadataIdentifiesOnlyThisConfiguredInstance() throws Exception {
+  mvc.perform(get("/auth/info")).andExpect(status().isOk())
+   .andExpect(jsonPath("$.instance").value("tt-11111111111111111111111111111111"));
  }
  @Test void loginUsesPkce() throws Exception {
   mvc.perform(get("/oauth2/authorization/kova")).andExpect(status().is3xxRedirection())
