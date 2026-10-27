@@ -20,12 +20,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties={"spring.datasource.url=jdbc:h2:mem:overtimeExcel;MODE=PostgreSQL;DB_CLOSE_DELAY=-1", "spring.datasource.driver-class-name=org.h2.Driver", "spring.datasource.username=sa", "spring.datasource.password=", "spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect", "spring.jpa.show-sql=false"})
 @AutoConfigureMockMvc
-class OvertimeExcelApiTest extends com.tasktracker.security.KovaHttpTestSupport {
+class OvertimeExcelApiTest extends com.tasktracker.security.AuthTestSupport {
     @Autowired org.springframework.web.context.WebApplicationContext context;
  @org.junit.jupiter.api.BeforeEach void authenticateBusinessApi() {
   mvc=org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(context)
    .apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity())
-   .defaultRequest(get("/").with(kovaAdmin()).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
+   .defaultRequest(get("/").with(owner()).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
    .build();
  }
  @Autowired MockMvc mvc;
@@ -59,7 +59,7 @@ class OvertimeExcelApiTest extends com.tasktracker.security.KovaHttpTestSupport 
             row.createCell(5).setCellValue("No");
             // A record added after downloading must also disappear on replacement.
             service.save(null, new OvertimeRequest(original.projectId(), original.date(), "Eliminar", "Otro", BigDecimal.ONE, "Entel", false));
-            mvc.perform(multipart("/api/overtime/import/excel").file(file(book)).with(kovaAdmin()).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
+            mvc.perform(multipart("/api/overtime/import/excel").file(file(book)).with(owner()).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2));
         }
         assertFalse(entries.existsById(oldId));
@@ -74,7 +74,7 @@ class OvertimeExcelApiTest extends com.tasktracker.security.KovaHttpTestSupport 
             var row = book.getSheetAt(0).createRow(3);
             row.createCell(0).setCellValue("2026-02-30");
             row.createCell(1).setCellValue("Inválido");
-            mvc.perform(multipart("/api/overtime/import/excel").file(file(book)).with(kovaAdmin()).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
+            mvc.perform(multipart("/api/overtime/import/excel").file(file(book)).with(owner()).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.startsWith("Fila 4:")));
         }
         assertTrue(entries.existsById(id));
@@ -100,14 +100,14 @@ class OvertimeExcelApiTest extends com.tasktracker.security.KovaHttpTestSupport 
                 else if (c == 2) duplicate.createCell(c).setCellValue(2.25);
                 else duplicate.createCell(c).setCellValue(source.getStringCellValue());
             }
-            mvc.perform(multipart("/api/overtime/import/excel").file(file(book)).with(kovaAdmin()).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())).andExpect(status().isOk());
+            mvc.perform(multipart("/api/overtime/import/excel").file(file(book)).with(owner()).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())).andExpect(status().isOk());
         }
         assertEquals(2, entries.count());
         assertTrue(service.all().stream().noneMatch(e -> e.sentToManagement()));
     }
     @Test void malformedWorkbookDoesNotDeleteExistingData() throws Exception {
         var id = seed();
-        mvc.perform(multipart("/api/overtime/import/excel").file(new MockMultipartFile("file", "bad.xlsx", "application/octet-stream", new byte[]{1,2,3})).with(kovaAdmin()).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
+        mvc.perform(multipart("/api/overtime/import/excel").file(new MockMultipartFile("file", "bad.xlsx", "application/octet-stream", new byte[]{1,2,3})).with(owner()).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
             .andExpect(status().isBadRequest());
         assertTrue(entries.existsById(id));
     }

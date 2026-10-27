@@ -1,4 +1,4 @@
-name: KOVA access
+name: CI
 on:
   push:
     branches: [main, 'codex/**']
