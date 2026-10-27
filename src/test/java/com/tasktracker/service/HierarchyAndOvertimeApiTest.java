@@ -16,7 +16,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(properties={"spring.datasource.url=jdbc:h2:mem:hierarchy;MODE=PostgreSQL;DB_CLOSE_DELAY=-1", "spring.datasource.driver-class-name=org.h2.Driver", "spring.datasource.username=sa", "spring.datasource.password=", "spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect", "spring.jpa.show-sql=false", "logging.level.com.tasktracker=INFO"})
 @AutoConfigureMockMvc
-class HierarchyAndOvertimeApiTest {
+class HierarchyAndOvertimeApiTest extends com.tasktracker.security.KovaHttpTestSupport {
+ @Autowired org.springframework.web.context.WebApplicationContext context;
+ @org.junit.jupiter.api.BeforeEach void authenticateBusinessApi() {
+  mvc=org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(context)
+   .apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity())
+   .defaultRequest(get("/").with(kovaAdmin()).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
+   .build();
+ }
  @Autowired MockMvc mvc; @Autowired ObjectMapper json;
  @Autowired ProjectRepository projects; @Autowired TaskRepository tasks; @Autowired IncidentRepository incidents;
  Project project(){return projects.save(Project.builder().name("Proyecto " + UUID.randomUUID()).status(ProjectStatus.INITIATED).build());}
@@ -74,8 +81,8 @@ class HierarchyAndOvertimeApiTest {
    .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
   try(var book=new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(excel))) {
    var sheet=book.getSheetAt(0);
-   assertEquals(7,sheet.getRow(0).getLastCellNum());
-   assertEquals("Proyecto",sheet.getRow(0).getCell(5).getStringCellValue());
+   assertEquals(6,sheet.getRow(0).getLastCellNum());
+   assertEquals("Proyecto",sheet.getRow(0).getCell(4).getStringCellValue());
    assertEquals("Rodrigo",sheet.getRow(1).getCell(1).getStringCellValue());
    assertEquals(1.5,sheet.getRow(1).getCell(2).getNumericCellValue());
    assertEquals(2,sheet.getLastRowNum());

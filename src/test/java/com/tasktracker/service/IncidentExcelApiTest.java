@@ -21,8 +21,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(properties={"spring.datasource.url=jdbc:h2:mem:incidents;MODE=PostgreSQL;DB_CLOSE_DELAY=-1", "spring.datasource.driver-class-name=org.h2.Driver", "spring.datasource.username=sa", "spring.datasource.password=", "spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect", "spring.jpa.show-sql=false", "logging.level.com.tasktracker=INFO"})
 @AutoConfigureMockMvc
-class IncidentExcelApiTest {
-    @Autowired MockMvc mvc;
+class IncidentExcelApiTest extends com.tasktracker.security.KovaHttpTestSupport {
+    @Autowired org.springframework.web.context.WebApplicationContext context;
+ @org.junit.jupiter.api.BeforeEach void authenticateBusinessApi() {
+  mvc=org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(context)
+   .apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity())
+   .defaultRequest(get("/").with(kovaAdmin()).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
+   .build();
+ }
+ @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired ProjectRepository projects;
     @Autowired IncidentRepository incidents;
