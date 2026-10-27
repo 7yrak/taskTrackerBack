@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-"""Deja el servidor listo para TaskTracker con login local, en un solo comando.
+"""Deja el servidor listo para que el job de Jenkins instale TaskTracker con login local.
 
-Fase 1 (antes de ejecutar el job de Jenkins):
-    sudo python3 deploy/preparar_login_local.py
-  1. Trae a los dos workspace de Jenkins el codigo de main (git fetch + checkout --detach).
-  2. Parcha deploy-from-jenkins-zip.sh: la API sin sesion debe responder 401, no 200.
-  3. Quita el guard "KOVA-only artifact" de /usr/local/sbin/deploy-tasktracker-from-jenkins.sh.
-  4. Pide la contrasena (2 veces, minimo 12 caracteres), genera el hash BCrypt y lo deja,
-     junto con el usuario, en /etc/tasktracker-kova.env (se conservan las variables de la base).
-  Guarda copia de cada archivo que modifica. Es repetible. Con --check-only no escribe nada.
+    sudo python3 deploy/preparar_login_local.py --check-only   # ensayo: no escribe nada
+    sudo python3 deploy/preparar_login_local.py                # aplica
 
-Fase 2 (despues de que el job de Jenkins genero el zip):
-    sudo python3 deploy/preparar_login_local.py --desplegar
-  Ejecuta deploy-from-jenkins-zip.sh (instala el JAR y el front) y comprueba que
-  /api/projects sin sesion responda 401.
+El job `task-tracker-build` ya clona main, compila y llama por ssh a
+/usr/local/sbin/deploy-tasktracker-from-jenkins.sh. Ese deployer rechaza cualquier JAR sin
+KovaSecurity.class (guard del corte a KOVA) y el servicio no arranca sin usuario y clave. Este script:
+  1. Quita ese guard del deployer (las comprobaciones de "API sin sesion = 401" se conservan).
+  2. Pide la contrasena (2 veces, minimo 12 caracteres), genera el hash BCrypt y deja usuario y hash en
+     /etc/tasktracker-kova.env; elimina SPRING_PROFILES_ACTIVE=kova-personal y conserva la base de datos.
+  3. Guarda copia de cada archivo que modifica. Es repetible. No detiene ni despliega nada:
+     despues se ejecuta el job en Jenkins.
+Con --workspace ademas lleva a origin/main los repos de /home/tyrak/proyectos/gestion-proyectos y parcha
+su deploy-from-jenkins-zip.sh (flujo antiguo; el job actual no lo usa).
 
 La contrasena nunca va como argumento, ni se imprime, ni se guarda en Git.
 """
@@ -101,13 +101,15 @@ def write_private(path,content,mode=0o600):
     temporary.write_text(content);os.chmod(temporary,mode);os.chown(temporary,0,0);os.replace(temporary,path)
 
 def prepare(args,workspace=WORKSPACE,sbin=SBIN_DEPLOYER,env_file=ENV_FILE,backups=BACKUPS):
-    zip_path=workspace/ZIP_DEPLOYER
-    zip_new,zip_changed=patch_zip_deployer(zip_path.read_text())
-    sbin_new,sbin_changed=(relax_deployer(sbin.read_text()) if sbin.exists() else ('',False))
-    report=update_workspace(workspace,apply=not args.check_only)
-    for name,before,after in report:print(('  '+name+': '+before+' -> '+after) if not args.check_only else ('  '+name+': '+before+' pasaria a '+after))
-    print('  '+ZIP_DEPLOYER+': '+('se parchara' if zip_changed else 'ya esta parchado'))
-    print('  '+sbin.name+': '+('se quitaria el guard KOVA' if sbin_changed else 'sin guard KOVA'))
+    if not sbin.exists():raise RuntimeError('No existe '+str(sbin))
+    sbin_new,sbin_changed=relax_deployer(sbin.read_text())
+    print('  '+sbin.name+': '+('se quitaria el guard KOVA' if sbin_changed else 'sin guard KOVA (nada que quitar)'))
+    print('  '+str(env_file)+': se agregaria TASKTRACKER_USER/TASKTRACKER_PASSWORD_HASH y se quitaria SPRING_PROFILES_ACTIVE')
+    zip_path=workspace/ZIP_DEPLOYER;zip_new,zip_changed=('',False)
+    if args.workspace:
+        zip_new,zip_changed=patch_zip_deployer(zip_path.read_text())
+        for name,before,after in update_workspace(workspace,apply=not args.check_only):print('  '+name+': '+before+(' pasaria a ' if args.check_only else ' -> ')+after)
+        print('  '+ZIP_DEPLOYER+': '+('se parchara' if zip_changed else 'ya esta parchado'))
     if args.check_only:print('CHECK_ONLY: no se escribio nada');return
     if os.geteuid()!=0:raise RuntimeError('Ejecuta con sudo')
     first=getpass.getpass('Contrasena nueva para '+args.username+' (min. 12 caracteres): ')
@@ -115,24 +117,17 @@ def prepare(args,workspace=WORKSPACE,sbin=SBIN_DEPLOYER,env_file=ENV_FILE,backup
     if getpass.getpass('Repite la contrasena: ')!=first:raise ValueError('Las contrasenas no coinciden')
     new_env=rewrite_env(env_file.read_text(),args.username,hash_password(first));del first
     folder=backups/datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ');folder.mkdir(parents=True,mode=0o700)
-    for source in (zip_path,sbin,env_file):
-        if source.exists():(folder/source.name).write_text(source.read_text());os.chmod(folder/source.name,0o600)
+    for source in (sbin,env_file):(folder/source.name).write_text(source.read_text());os.chmod(folder/source.name,0o600)
     write_private(env_file,new_env)
-    if zip_changed:zip_path.write_text(zip_new)
     if sbin_changed:sbin.write_text(sbin_new);os.chown(sbin,0,0);os.chmod(sbin,0o755)
-    print('LISTO: copias en '+str(folder)+'. Ahora ejecuta el job de TaskTracker en Jenkins y luego: sudo python3 deploy/preparar_login_local.py --desplegar')
-
-def deploy(workspace=WORKSPACE):
-    script=workspace/ZIP_DEPLOYER
-    if os.geteuid()!=0:raise RuntimeError('Ejecuta con sudo')
-    if subprocess.run(['bash',str(script)]).returncode:raise RuntimeError('El despliegue fallo; revisa el log que imprimio el script')
-    print('DESPLEGADO: abre TaskTracker; debe mostrar "Iniciar sesion" con usuario y contrasena.')
+    if zip_changed:(folder/ZIP_DEPLOYER).write_text(zip_path.read_text());zip_path.write_text(zip_new)
+    print('LISTO: copias en '+str(folder)+'. Ahora ejecuta el job task-tracker-build en Jenkins (Construir ahora).')
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--username',default='sergio');parser.add_argument('--check-only',action='store_true');parser.add_argument('--desplegar',action='store_true')
+    parser.add_argument('--username',default='sergio');parser.add_argument('--check-only',action='store_true');parser.add_argument('--workspace',action='store_true')
     args=parser.parse_args()
-    try:deploy() if args.desplegar else prepare(args)
+    try:prepare(args)
     except (ValueError,RuntimeError,OSError) as error:print('FALLO: '+str(error));raise SystemExit(1)
 
 if __name__=='__main__':main()

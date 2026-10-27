@@ -27,6 +27,7 @@ class PrepareTests(unittest.TestCase):
             sh('git','-C',str(self.workspace/name),'checkout','-q','--detach')
             (work/'f').write_text('v2');sh('git','-C',str(work),'commit','-qam','v2');sh('git','-C',str(work),'push','-q',str(origin),'main')
         (self.workspace/tool.ZIP_DEPLOYER).write_text(ZIP_SCRIPT)
+        self.sbin=self.base/'sbin.sh';self.sbin.write_text('#!/bin/bash\n')
 
     def head(self,name):return subprocess.run(['git','-C',str(self.workspace/name),'rev-parse','--short','HEAD'],capture_output=True,text=True).stdout.strip()
     def origin_head(self,name):return subprocess.run(['git','-C',str(self.base/(name+'-origin')),'rev-parse','--short','main'],capture_output=True,text=True).stdout.strip()
@@ -53,7 +54,7 @@ class PrepareTests(unittest.TestCase):
         before={n:self.head(n) for n in tool.REPOS};text=(self.workspace/tool.ZIP_DEPLOYER).read_text()
         out=io.StringIO()
         with redirect_stdout(out):
-            tool.prepare(argparse.Namespace(check_only=True,username='sergio'),self.workspace,self.base/'sbin.sh',self.base/'tt.env',self.base/'bk')
+            tool.prepare(argparse.Namespace(check_only=True,username='sergio',workspace=True),self.workspace,self.sbin,self.base/'tt.env',self.base/'bk')
         self.assertEqual(before,{n:self.head(n) for n in tool.REPOS});self.assertEqual(text,(self.workspace/tool.ZIP_DEPLOYER).read_text())
         self.assertIn('pasaria a',out.getvalue());self.assertIn('no se escribio nada',out.getvalue())
 
@@ -70,6 +71,25 @@ class PrepareTests(unittest.TestCase):
         legacy='test -f "$JAR_FILE"\ncurl --fail --silent --max-time 2 http://127.0.0.1:8081/api/projects >/dev/null\ncurl --fail --silent --show-error --max-time 5 http://127.0.0.1:8081/api/projects >/dev/null\n'
         relaxed,changed=tool.relax_deployer(cutover.harden_deployer(legacy,'tasktracker'))
         self.assertTrue(changed);self.assertNotIn('KOVA',relaxed)
+
+    def test_default_check_only_does_not_touch_the_workspace(self):
+        before={n:self.head(n) for n in tool.REPOS};out=io.StringIO()
+        with redirect_stdout(out):
+            tool.prepare(argparse.Namespace(check_only=True,username='sergio',workspace=False),self.workspace,self.sbin,self.base/'tt.env',self.base/'bk')
+        self.assertEqual(before,{n:self.head(n) for n in tool.REPOS});self.assertNotIn('taskTrackerBack',out.getvalue())
+
+    @unittest.skipUnless(os.geteuid()==0,'necesita root para chown')
+    def test_full_run_without_workspace(self):
+        import apply_managed_applications as cutover
+        legacy='test -f "$JAR_FILE"\ncurl --fail --silent --max-time 2 http://127.0.0.1:8081/api/projects >/dev/null\ncurl --fail --silent --show-error --max-time 5 http://127.0.0.1:8081/api/projects >/dev/null\n'
+        self.sbin.write_text(cutover.harden_deployer(legacy,'tasktracker'))
+        env=self.base/'tt.env';env.write_text('TASKTRACKER_DB_USER=app\nSPRING_PROFILES_ACTIVE=kova-personal\n')
+        from unittest.mock import patch
+        with patch.object(tool.getpass,'getpass',return_value='una-clave-larga-123'),patch.object(tool,'hash_password',return_value=HASH),redirect_stdout(io.StringIO()):
+            tool.prepare(argparse.Namespace(check_only=False,username='sergio',workspace=False),self.workspace,self.sbin,env,self.base/'bk')
+        self.assertNotIn('KovaSecurity',self.sbin.read_text());self.assertIn('== 401 ]]',self.sbin.read_text())
+        self.assertIn('TASKTRACKER_USER=sergio',env.read_text());self.assertNotIn('kova-personal',env.read_text());self.assertEqual(oct(env.stat().st_mode)[-3:],'600')
+        self.assertEqual(len(list((self.base/'bk').iterdir())),1)
 
     def test_env_rewrite(self):
         old='TASKTRACKER_DB_USER=app\nSPRING_PROFILES_ACTIVE=kova-personal\nSERVER_ADDRESS=127.0.0.1\n'
