@@ -8,7 +8,7 @@ El job `task-tracker-build` ya clona main, compila y llama por ssh a
 /usr/local/sbin/deploy-tasktracker-from-jenkins.sh. Ese deployer rechaza cualquier JAR sin
 KovaSecurity.class (guard del corte a KOVA) y el servicio no arranca sin usuario y clave. Este script:
   1. Quita ese guard del deployer (las comprobaciones de "API sin sesion = 401" se conservan).
-  2. Pide la contrasena (2 veces, minimo 12 caracteres), genera el hash BCrypt y deja usuario y hash en
+  2. Pide la contrasena (2 veces, minimo 8 caracteres), genera el hash BCrypt y deja usuario y hash en
      /etc/tasktracker-kova.env; elimina SPRING_PROFILES_ACTIVE=kova-personal y conserva la base de datos.
   3. Guarda copia de cada archivo que modifica. Es repetible. No detiene ni despliega nada:
      despues se ejecuta el job en Jenkins.
@@ -112,8 +112,8 @@ def prepare(args,workspace=WORKSPACE,sbin=SBIN_DEPLOYER,env_file=ENV_FILE,backup
         print('  '+ZIP_DEPLOYER+': '+('se parchara' if zip_changed else 'ya esta parchado'))
     if args.check_only:print('CHECK_ONLY: no se escribio nada');return
     if os.geteuid()!=0:raise RuntimeError('Ejecuta con sudo')
-    first=getpass.getpass('Contrasena nueva para '+args.username+' (min. 12 caracteres): ')
-    if len(first)<12:raise ValueError('Usa al menos 12 caracteres')
+    first=getpass.getpass('Contrasena nueva para '+args.username+' (min. 8 caracteres): ')
+    if len(first)<8:raise ValueError('Usa al menos 8 caracteres')
     if getpass.getpass('Repite la contrasena: ')!=first:raise ValueError('Las contrasenas no coinciden')
     new_env=rewrite_env(env_file.read_text(),args.username,hash_password(first));del first
     folder=backups/datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ');folder.mkdir(parents=True,mode=0o700)
