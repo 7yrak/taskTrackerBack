@@ -25,6 +25,10 @@ import org.springframework.security.web.savedrequest.NullRequestCache;
  */
 @Configuration
 public class LocalSecurity {
+    @org.springframework.beans.factory.annotation.Value("${SHARED_PORTAL_KEY:}") private String sharedPortalKey;
+    @org.springframework.beans.factory.annotation.Value("${tasktracker.auth.username:}") private String portalLocalUser;
+    @org.springframework.beans.factory.annotation.Autowired private org.springframework.beans.factory.ObjectProvider<org.springframework.security.core.userdetails.UserDetailsService> portalUsers;
+
 
     private static final String BCRYPT = "\\$2[aby]\\$\\d{2}\\$[./A-Za-z0-9]{53}";
 
@@ -74,6 +78,7 @@ public class LocalSecurity {
             .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)));
         http.exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
         http.addFilterBefore(throttle, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new SharedPortalFilter(sharedPortalKey,()->portalUsers.getObject().loadUserByUsername(portalLocalUser)), org.springframework.security.web.authentication.logout.LogoutFilter.class);
         return http.build();
     }
 }

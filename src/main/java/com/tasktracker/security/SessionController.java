@@ -16,7 +16,7 @@ public class SessionController {
 
     /** Requiere sesión: sin ella el filtro responde 401 y el front muestra el login. */
     @GetMapping("/auth/session")
-    Map<String, String> session(Principal principal) {
-        return Map.of("username", principal.getName());
+    Map<String, String> session(Principal principal, jakarta.servlet.http.HttpServletRequest request) {
+        return Map.of("username", request.getAttribute("shared.portal.username") instanceof String user ? user : principal.getName());
     }
 }
