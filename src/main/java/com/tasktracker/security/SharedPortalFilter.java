@@ -16,7 +16,7 @@ final class SharedPortalFilter extends OncePerRequestFilter {
  @Override protected void doFilterInternal(HttpServletRequest request,HttpServletResponse response,FilterChain chain)throws IOException,ServletException {
   String user=request.getHeader("X-Shared-User"),provided=request.getHeader("X-Shared-Key");
   if(user!=null||provided!=null){
-   if(key.length()<40||provided==null||!"sergio".equals(user)||!MessageDigest.isEqual(key.getBytes(StandardCharsets.UTF_8),provided.getBytes(StandardCharsets.UTF_8))){response.setStatus(401);return;}
+   if(key.length()<40||provided==null||!"tyrak".equals(user)||!MessageDigest.isEqual(key.getBytes(StandardCharsets.UTF_8),provided.getBytes(StandardCharsets.UTF_8))){response.setStatus(401);return;}
    try {
     UserDetails principal=owner.get();
     if(!principal.isEnabled()||!principal.isAccountNonLocked()||!principal.isAccountNonExpired()){response.setStatus(403);return;}
