@@ -85,6 +85,7 @@ public class IncidentExcelService {
                 for (int col = 0; col < values.length; col++) write(row.createCell(col), values[col], body, dateStyle);
             }
             sheet.setAutoFilter(new CellRangeAddress(0, Math.max(1, list.size()), 0, HEADERS.length - 1));
+            ExcelReportStyle.apply(book, sheet, HEADERS.length, "Incidentes · " + project.getName(), -1);
             book.write(output); return output.toByteArray();
         }
     }
@@ -255,6 +256,9 @@ public class IncidentExcelService {
             "No uses fórmulas. Máximo 2000 incidentes y 10 MB por archivo. Un Excel vacío o con errores no reemplaza nada."};
         CellStyle body=bodyStyle(book);
         for(int r=0;r<instructions.length;r++){ Row row=guide.createRow(r); row.setHeightInPoints(r==0?30:42); Cell cell=row.createCell(0); cell.setCellValue(instructions[r]); cell.setCellStyle(body); }
+        ExcelReportStyle.apply(book, sheet, HEADERS.length, "Incidentes · " + projectName, -1);
+        ExcelReportStyle.apply(book, guide, 1, "Guía de importación", -1);
+        guide.getRow(0).setHeightInPoints(36);
         return book;
     }
     private CellStyle bodyStyle(XSSFWorkbook book) {

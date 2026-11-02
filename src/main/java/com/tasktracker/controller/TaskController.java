@@ -5,6 +5,7 @@ import com.tasktracker.dto.StatusUpdateRequest;
 import com.tasktracker.dto.TaskDTO;
 import com.tasktracker.dto.TaskImportResult;
 import com.tasktracker.dto.TaskRequest;
+import com.tasktracker.dto.TaskViewExportRow;
 import com.tasktracker.model.TaskPriority;
 import com.tasktracker.model.TaskStatus;
 import com.tasktracker.service.TaskImportService;
@@ -33,6 +34,18 @@ public class TaskController {
     private final com.tasktracker.service.RowHierarchyService hierarchy;
     private final TaskService taskService;
     private final TaskImportService taskImportService;
+    private final com.tasktracker.service.TaskViewExcelService taskViewExcel;
+
+    @PostMapping("/export/view")
+    public ResponseEntity<byte[]> exportView(
+            @RequestBody @jakarta.validation.constraints.NotEmpty
+            @jakarta.validation.constraints.Size(max = 10000)
+            List<@Valid TaskViewExportRow> rows) throws IOException {
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"tareas.xlsx\"")
+            .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+            .body(taskViewExcel.export(rows));
+    }
 
  @PatchMapping("/{id}/hierarchy")
  @ResponseStatus(HttpStatus.NO_CONTENT)
