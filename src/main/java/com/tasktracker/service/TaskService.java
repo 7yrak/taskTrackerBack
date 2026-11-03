@@ -352,9 +352,10 @@ public class TaskService {
     private TaskDTO toDTO(Task t) {
         boolean hasChildren = t.getChildren() != null && !t.getChildren().isEmpty();
 
-        int progressActual = hasChildren
-            ? computeProgressActual(t)
-            : (t.getProgressActual() != null ? t.getProgressActual() : 0);
+        // Apply the same completion rule to leaves and groups. Older completed
+        // rows may retain a partial stored percentage; reading them must not
+        // create false delay alerts or disagree with their parent's progress.
+        int progressActual = computeProgressActual(t);
 
         LocalDate startDate = hasChildren ? computeStartDate(t) : t.getStartDate();
         LocalDate dueDate   = hasChildren ? computeDueDate(t)   : t.getDueDate();

@@ -23,6 +23,8 @@ Los grupos se calculan desde sus subtareas y no se pueden editar directamente en
 
 Completar una tarea fija su avance en 100 %. Cambiar a otro estado una tarea al 100 % reinicia el avance a 0 %; la interfaz lo explica antes de confirmar. Los cambios de estado sincronizan el estado del proyecto usando tareas hoja. Cambiar únicamente prioridad, responsables o fechas conserva el estado explícito del proyecto.
 
+Las tareas antiguas en estado `DONE` se presentan con 100 % de avance, igual que sus grupos, aunque su porcentaje almacenado sea menor. La ficha, el dashboard, los listados y las exportaciones usan así un avance coherente; esta normalización de lectura no modifica los registros históricos.
+
 ## Verificación
 
 `mvn test` cubre la suite completa, incluida `ProjectDetailAndBulkApiTest`: aislamiento por proyecto, consulta de proyectos cerrados, actualizaciones parciales, rechazo de lotes inválidos, conservación de relaciones, limpieza explícita de campos, coherencia de avance y protección de sesión/CSRF.

@@ -117,4 +117,15 @@ class ProjectDetailAndBulkApiTest extends AuthTestSupport {
         batch(Map.of("taskIds",List.of(0),"priority","HIGH")).andExpect(status().isBadRequest());
         mvc.perform(get("/api/projects/"+Long.MAX_VALUE+"/detail").with(owner())).andExpect(status().isNotFound());
     }
+
+    @Test void completedLegacyRowsReadAsFullProgressWithoutChangingStoredData() throws Exception {
+        var p=project(); var parent=task(p,"Grupo"); var child=task(p,"Completada con porcentaje antiguo");
+        child.setParent(parent); child.setStatus(TaskStatus.DONE); child.setProgressActual(12); tasks.save(child);
+        mvc.perform(get("/api/tasks/"+child.getId()).with(owner())).andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("DONE")).andExpect(jsonPath("$.progressActual").value(100));
+        assertEquals(100,service.findById(parent.getId()).progressActual());
+        mvc.perform(get("/api/projects/"+p.getId()+"/detail").with(owner())).andExpect(status().isOk())
+            .andExpect(jsonPath("$.project.progressActual").value(100));
+        assertEquals(12,tasks.findById(child.getId()).orElseThrow().getProgressActual());
+    }
 }

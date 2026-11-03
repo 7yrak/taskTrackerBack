@@ -129,7 +129,8 @@ public class ProjectService {
 
             if (!leafTasks.isEmpty()) {
                 double sumActual = leafTasks.stream()
-                    .mapToInt(task -> task.getProgressActual() != null ? task.getProgressActual() : 0)
+                    .mapToInt(task -> task.getStatus() == TaskStatus.DONE ? 100
+                        : task.getProgressActual() != null ? task.getProgressActual() : 0)
                     .sum();
                 progressActual = (int) Math.round(sumActual / leafTasks.size());
 
