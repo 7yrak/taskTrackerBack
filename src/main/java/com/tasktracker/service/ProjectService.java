@@ -87,7 +87,10 @@ public class ProjectService {
             .orElseThrow(() -> new NoSuchElementException("Proyecto no encontrado: " + projectId));
 
         List<Task> tasks = taskRepository.findByProjectId(projectId);
+        java.util.Set<Long> parentIds = tasks.stream().filter(t -> t.getParent() != null)
+            .map(t -> t.getParent().getId()).collect(java.util.stream.Collectors.toSet());
         List<Task> activeTasks = tasks.stream()
+            .filter(task -> !parentIds.contains(task.getId()))
             .filter(task -> task.getStatus() != com.tasktracker.model.TaskStatus.STOPPED)
             .toList();
 

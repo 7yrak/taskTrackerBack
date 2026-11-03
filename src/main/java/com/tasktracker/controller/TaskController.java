@@ -36,6 +36,11 @@ public class TaskController {
     private final TaskImportService taskImportService;
     private final com.tasktracker.service.TaskViewExcelService taskViewExcel;
 
+    @PatchMapping("/bulk")
+    public List<TaskDTO> bulkUpdate(@Valid @RequestBody com.tasktracker.dto.TaskBulkUpdateRequest request) {
+        return taskService.bulkUpdate(request);
+    }
+
     @PostMapping("/export/view")
     public ResponseEntity<byte[]> exportView(
             @RequestBody @jakarta.validation.constraints.NotEmpty

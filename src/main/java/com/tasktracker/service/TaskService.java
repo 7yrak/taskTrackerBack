@@ -71,6 +71,57 @@ public class TaskService {
             .orElseThrow(() -> new NoSuchElementException("Tarea no encontrada: " + id));
     }
 
+    @Transactional(readOnly = true)
+    public List<TaskDTO> findByProject(Long projectId) {
+        return taskRepository.findByProjectId(projectId).stream().map(this::toDTO).toList();
+    }
+
+    public List<TaskDTO> bulkUpdate(com.tasktracker.dto.TaskBulkUpdateRequest request) {
+        if (request.status() == null && request.priority() == null && !request.updateAssignees()
+                && !request.updateStartDate() && !request.updateDueDate())
+            throw new IllegalArgumentException("Selecciona al menos un cambio para aplicar");
+        if (request.taskIds() == null || request.taskIds().isEmpty() || request.taskIds().size() > 500)
+            throw new IllegalArgumentException("Selecciona entre 1 y 500 tareas");
+        var ids = new LinkedHashSet<>(request.taskIds());
+        if (ids.size() != request.taskIds().size()) throw new IllegalArgumentException("La selección contiene tareas repetidas");
+        lockHierarchyProjects();
+        var selected = taskRepository.findAllById(ids);
+        if (selected.size() != ids.size()) throw new IllegalArgumentException("Una tarea de la selección ya no existe. Actualiza la vista.");
+        List<TeamMember> assignees = null;
+        if (request.updateAssignees()) {
+            var memberIds = new LinkedHashSet<>(request.assigneeIds() == null ? List.<Long>of() : request.assigneeIds());
+            assignees = memberRepository.findAllById(memberIds);
+            if (assignees.size() != memberIds.size()) throw new IllegalArgumentException("Un responsable seleccionado ya no existe");
+        }
+        // Validate the entire selection before touching any entity. The transaction also
+        // rolls back the whole batch if persistence or project synchronization fails.
+        for (Task task : selected) {
+            if (!task.getChildren().isEmpty()) throw new IllegalArgumentException("La tarea #" + task.getId() + " es un grupo. Selecciona sus subtareas para editar sus valores.");
+            LocalDate start = request.updateStartDate() ? request.startDate() : task.getStartDate();
+            LocalDate due = request.updateDueDate() ? request.dueDate() : task.getDueDate();
+            if (start != null && due != null && start.isAfter(due))
+                throw new IllegalArgumentException("Tarea #" + task.getId() + ": la fecha de inicio no puede ser posterior al vencimiento");
+        }
+        var affectedProjects = new TreeSet<Long>();
+        for (Task task : selected) {
+            if (request.status() != null) {
+                task.setStatus(request.status());
+                if (request.status() == TaskStatus.DONE) task.setProgressActual(100);
+                else if (task.getProgressActual() != null && task.getProgressActual() >= 100) task.setProgressActual(0);
+            }
+            if (request.priority() != null) task.setPriority(request.priority());
+            if (request.updateAssignees()) task.setAssignees(new ArrayList<>(assignees));
+            if (request.updateStartDate()) task.setStartDate(request.startDate());
+            if (request.updateDueDate()) task.setDueDate(request.dueDate());
+            task.setUpdatedAt(LocalDateTime.now());
+            if (task.getProject() != null) affectedProjects.add(task.getProject().getId());
+        }
+        taskRepository.flush();
+        if (request.status() != null) affectedProjects.forEach(projectService::syncStatusFromTasks);
+        Map<Long, Task> byId = selected.stream().collect(java.util.stream.Collectors.toMap(Task::getId, t -> t));
+        return ids.stream().map(id -> toDTO(byId.get(id))).toList();
+    }
+
     private void lockHierarchyProjects() {
         projectRepository.findAll().stream().map(Project::getId).sorted()
             .forEach(projectRepository::findLockedById);

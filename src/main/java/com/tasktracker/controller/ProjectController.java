@@ -16,6 +16,12 @@ import java.util.List;
 public class ProjectController {
 
     private final ProjectService projectService;
+    private final com.tasktracker.service.ProjectDetailService projectDetail;
+
+    @GetMapping("/{id}/detail")
+    public com.tasktracker.dto.ProjectDetailDTO detail(@PathVariable Long id) {
+        return projectDetail.get(id);
+    }
 
     @GetMapping
     public List<ProjectDTO> getAll() {

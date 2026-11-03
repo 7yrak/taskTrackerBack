@@ -21,6 +21,7 @@ public class OvertimeService {
   return all();
  }
  @Transactional(readOnly=true) public List<OvertimeDTO> all() { return entries.findAllByOrderByDateDescIdDesc().stream().map(this::dto).toList(); }
+ @Transactional(readOnly=true) public List<OvertimeDTO> forProject(Long id) { return entries.findByProjectIdOrderByDateDescIdDesc(id).stream().map(this::dto).toList(); }
  public OvertimeDTO save(Long id,OvertimeRequest r) {
   OvertimeEntry e=id==null?new OvertimeEntry():entries.findById(id).orElseThrow(()->new NoSuchElementException("Registro no encontrado"));
   e.setProject(projects.findById(r.projectId()).orElseThrow(()->new IllegalArgumentException("Proyecto no encontrado")));

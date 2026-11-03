@@ -20,6 +20,7 @@ public class IncidentService {
  private final TeamMemberRepository members;
  private final IncidentWorkflow workflow;
  @Transactional(readOnly=true) public List<IncidentDTO> all() { return incidents.findAllByOrderByCreatedAtDesc().stream().map(this::dto).toList(); }
+ @Transactional(readOnly=true) public List<IncidentDTO> forProject(Long id) { return incidents.findByProjectIdOrderByCreatedAtDesc(id).stream().map(this::dto).toList(); }
  @Transactional(readOnly=true) public IncidentDTO get(Long id) { return dto(find(id)); }
  private Incident find(Long id) { return incidents.findById(id).orElseThrow(() -> new NoSuchElementException("Incidente no encontrado")); }
  private Incident locked(Long id) {
